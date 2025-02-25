@@ -1,0 +1,55 @@
+tipo_dato ::= "int" | "float" | "bool" | "char" | "string"
+            | "array" "<" tipo_dato ">"
+            | "struct"
+            | "class"
+            | "enum"
+
+entrada ::= "read" "(" identificador ")"
+salida ::= "print" "(" expression ")"
+
+declaracion ::= tipo_dato? identificador "=" expression
+constante ::= "const" tipo_dato? identificador "=" expression
+
+identificador ::= letter (letter | digit)*
+letter ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+          | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+digit ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+operador_aritmetico ::= "+" | "-" | "*" | "/" | "%"
+operador_relacional ::= "<" | ">" | "<=" | ">=" | "==" | "!="
+operador_logico ::= "AND" | "OR" | "NOT"
+operador_asignacion ::= "=" | "+=" | "-=" | "*=" | "/="
+
+expression ::= term (( "+" | "-" ) term)*
+term ::= factor (( "*" | "/" | "%" ) factor)*
+factor ::= number | identificador | "(" expression ")"
+number ::= digit+
+
+condicional ::= "if" "(" expression_booleana ")" bloque ("else" bloque)?
+expression_booleana ::= expression operador_relacional expression | expression operador_logico expression
+
+bloque ::= "{" (declaracion | expression | control_flujo)* "}"
+
+switch ::= "switch" "(" expression ")" "{" casos "}"
+casos ::= (case)+ ("default" ":" bloque)?
+case ::= "case" expression ":" bloque
+
+loop ::= "for" "(" expression ";" expression ";" expression ")" bloque
+       | "while" "(" expression_booleana ")" bloque
+       | "do" bloque "while" "(" expression_booleana ")"
+
+control_flujo ::= "break" | "continue" | "return" expression?
+
+funcion ::= "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
+parametros ::= tipo_dato identificador ("," tipo_dato identificador)*
+
+try_catch ::= "try" bloque "catch" "(" tipo_error identificador ")" bloque
+
+module ::= "import" identificador
+exportacion ::= "export" identificador
+
+clase ::= "class" identificador "{" miembros "}"
+miembros ::= (tipo_dato identificador ";")* (funcion)*
+herencia ::= "class" identificador "extends" identificador "{" miembros "}"
+polimorfismo ::= "override" funcion
+encapsulamiento ::= ("public" | "private" | "protected") tipo_dato identificador
