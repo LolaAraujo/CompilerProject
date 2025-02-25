@@ -6,6 +6,11 @@ import tkinter as tk
 from tkinter import *
 from tkinter import messagebox
 
+app = tk.Tk()
+app.title("Analizador Léxico")
+app.geometry("800x600")
+app.configure(bg = 'black')
 
+app.mainloop()
 
 
