@@ -1,6 +1,6 @@
 from lark import Lark
 
-with open ("Gachuz.ebnf", "r") as file:
+with open ("prueba.ebnf", "r") as file:
         grammar = file.read()
 
 try:
@@ -9,7 +9,4 @@ try:
 
 except Exception:
     print("La gramatica es no valida")
-
-try:
-    sentencia = " x > 0"
 
