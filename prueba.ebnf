@@ -1,185 +1,76 @@
-// Definición de tipos de datos
-type_data: type_specifier declarations
-          | primitive
-          | compuest
-          | user_def
-
-type_specifier: "type"
-
-// Tipos primitivos
-primitive: "int" | "float" | "bool" | "char"
-
-// Tipos compuestos
-compuest: "str" | "arr" | "struc"
-
-// Definición de tipos de usuario
-user_def: "def_class" IDENTIFIER ":" expression ";"
-
-// Expresiones
-expression: term
-          | expression "+" term
-          | expression "-" term
-
-term: factor
-    | term "*" factor
-    | term "/" factor
-
-factor: NUMBER
-      | "(" expression ")"
-      | IDENTIFIER
-
-// Números
-NUMBER: /[0-9]+/
-
-// Identificadores
-IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
-
-// Asignaciones
-asignation: declarator
-
-declarator: varDec
-          | constDec
-
-varDec: "var" scope IDENTIFIER lifeTime ":" type_data "=" expression ";"
-
-constDec: "const" IDENTIFIER ":" type_data "=" expression ";"
-
-// Ámbito y tiempo de vida
-scope: "glob" | "loc" | "block"
-
-lifeTime: "static" | "dynamic"
-
-// Expresiones avanzadas
-expression: conditional_expression
-          | assignment_expression
-          | unary_expression
-          | logic_expression
-
-conditional_expression: expression comparison_operator expression
-
-assignment_expression: IDENTIFIER assignment_operator expression
-
-unary_expression: unary_operator expression
-
-logic_expression: expression logic_operator expression
-
-// Operadores
-comparison_operator: "<=" | ">=" | "!=" | "==" | "<" | ">"
-
-assignment_operator: "=" | "+=" | "-=" | "*=" | "/=" | "%="
-
-unary_operator: "+" | "-" | "!"
-
-logic_operator: "and" | "or"
-
-// Estructuras de control
-switch: "switch" expression ":" ("case" expression ":" statement)* ("default" ":" statement)?
-
-loop: "while" "(" expression ")" ":" statement
-    | "for" "(" expression ";" expression ";" expression ")" ":" statement
-
-statement: expression ";"
-          | block
-
-block: "{" statement* "}"
-
-// Funciones
-type_func: "int" | "float" | "bool" | "char" | "void"
-
-param_list: param ("," param)*
-
-param: IDENTIFIER ":" type_data
-
-arg_list: expression ("," expression)*
-
-// Comentarios
-coment: SHORT_COMMENT | LONG_COMMENT
-
-SHORT_COMMENT: /--[^\n]*/
-
-LONG_COMMENT: /\/\*.*?\*\//s
-
-// Módulos y namespaces
-import: "import" (lib | mod) ";"
-
-export: "export" (lib | mod) IDENTIFIER ";"
-
-mod: IDENTIFIER ".mod"
-   | ".mod" IDENTIFIER
-   | ".mod" user_def
-
-namespace: "namespace" IDENTIFIER ":" "[" cont_namespace "]"
-
-cont_namespace: IDENTIFIER ("," IDENTIFIER)*
-
-depend: "start" mod ";"
-
-// Clases
-class: "class" IDENTIFIER ":" classDef "(" param_list ")" ":" body_statment ";"
-
-classDef: "class"
-
-body_statment: attrib metd obj
-
-attrib: "self" "." IDENTIFIER "=" expression ";"
-      | IDENTIFIER "=" expression ";"
-
-metd: "method" IDENTIFIER ":" statement
-
-obj: type_data declarator "=" IDENTIFIER "(" arg_list ")"
-
-// Herencia
-classInheritance: "class" IDENTIFIER "include" IDENTIFIER ":" body_statment ";"
-
-// Encapsulamiento
-encapsul: "self" "._" IDENTIFIER "=" expression ";"
-         | IDENTIFIER
-
-get: "get" declarator ":" "return" encapsul ";"
-
-set: "set" declarator ":" encapsul ";"
-
-// Clases abstractas e interfaces
-class_Intf: "interface" IDENTIFIER ":" "abstract" "def_class" IDENTIFIER "[" statement "]"
-
-class_abst: "abstract" "class" IDENTIFIER ":" "[" statement "]"
-
-// Colecciones
-list: "[" expression ("," expression)* "]"
-
-tup: "(" expression ("," expression)* ")"
-
-dic: "{" key_value_pair ("," key_value_pair)* "}"
-
-key_value_pair: expression ":" expression
-
-// Pilas y colas
-stack: "stack" ":" declarator "=" "new" "stack" "(" expression ")"
-
-col: "col" ":" declarator "=" "new" "col" "(" expression ")"
-
-// Entrada y salida
-entry: declarator "=" "entry" "(" TEXT ")"
-
-output: "print" "(" TEXT "+" entry ")"
-
-TEXT: /"[^"]*"/
-
-// Archivos
-openArch: declarator "=" "open" "(" URL ")"
-
-readArch: openArch "." "read" "()"
-
-writeArch: openArch "." "write" "(" TEXT ")"
-
-closeArch: openArch "." "close" "()"
-
-URL: /[a-zA-Z0-9\/\.\-_]+/
-
-// Modularización
-modular: import
-        | "def_class" "(" param_list ")" ":" statement ";"
-        | class
-
-// Ignorar espacios en blanco
-%ignore /[ \t\r\n]+/
+start: statement+
+
+statement : declaracion
+          | constante
+          | entrada
+          | salida
+          | expression
+          | condicional
+          | switch
+          | loop
+          | control_flujo
+          | funcion
+          | try_catch
+          | module
+          | exportacion
+          | clase
+          | herencia
+          | polimorfismo
+          | encapsulamiento
+
+
+tipo_dato : "int" | "float" | "bool" | "char" | "string"
+            | "array" "<" tipo_dato ">"
+            | "struct"
+            | "class"
+            | "enum"
+
+entrada : "read" "(" identificador ")"
+salida : "print" "(" expression ")"
+
+declaracion : tipo_dato? identificador "=" expression
+constante : "const" tipo_dato? identificador "=" expression
+
+identificador : letter (letter | digit)*
+letter : "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+          | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+digit : "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+operador_aritmetico : "+" | "-" | "*" | "/" | "%"
+operador_relacional : "<" | ">" | "<=" | ">=" | "==" | "!="
+operador_logico : "AND" | "OR" | "NOT"
+operador_asignacion : "=" | "+=" | "-=" | "*=" | "/="
+
+expression : term (( "+" | "-" ) term)*
+term : factor (( "*" | "/" | "%" ) factor)*
+factor : number | identificador | "(" expression ")"
+number : digit+
+
+condicional : "if" "(" expression_booleana ")" bloque ("else" bloque)?
+expression_booleana : expression operador_relacional expression | expression operador_logico expression
+
+bloque : "{" (declaracion | expression | control_flujo)* "}"
+
+switch : "switch" "(" expression ")" "{" casos "}"
+casos : (case)+ ("default" ":" bloque)?
+case : "case" expression ":" bloque
+
+loop : "for" "(" expression ";" expression ";" expression ")" bloque
+       | "while" "(" expression_booleana ")" bloque
+       | "do" bloque "while" "(" expression_booleana ")"
+
+control_flujo : "break" | "continue" | "return" expression?
+
+funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
+parametros : tipo_dato identificador ("," tipo_dato identificador)*
+
+try_catch : "try" bloque "catch" "(" identificador ")" bloque
+
+module : "import" identificador
+exportacion : "export" identificador
+
+clase : "class" identificador "{" miembros "}"
+miembros : (tipo_dato identificador ";")* (funcion)*
+herencia : "class" identificador "extends" identificador "{" miembros "}"
+polimorfismo : "override" funcion
+encapsulamiento : ("public" | "private" | "protected") tipo_dato identificador
