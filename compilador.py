@@ -18,7 +18,22 @@ def update_line_numbers(event=None):
 
 def compile_code():
     """Simulación de compilación."""
+        
+    if input_code.get("1.0", "end-1c") == "":
+        console_output.insert("end", "No hay código para compilar.\n")
+        symbol_table.insert("end", "No hay símbolos.\n")
+        return
+    
+    console_output.delete("1.0", "end")
+    symbol_table.delete("1.0", "end")
     console_output.insert("end", "Compilando...\n")
+    
+    root.after(2000, show_compiling_complete)  # Llamar a la función después de 2 segundos
+
+def show_compiling_complete():
+    """Mostrar mensaje de compilación completada."""
+    console_output.delete("1.0", "end")
+    console_output.insert("end", "Compilación completada.\n")
 
 # ------- FRAMES -------
 # FRAMA PARA ICONOS
@@ -40,8 +55,8 @@ frame_inferior.pack(fill="x")
 
 # ----- OBJETOS EN FRAMES -----
 
-compile_image = tk.PhotoImage(file="compilar.png")
-compile_button = tk.Button(frame_superior, image=compile_image, command=compile_code, width=40, height=40)
+button_image = tk.PhotoImage(file="compilar.png")
+compile_button = tk.Button(frame_superior, image=button_image, command=compile_code, width=40, height=40)
 compile_button.pack()
 
 # Canvas para los números de línea
@@ -61,8 +76,10 @@ line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 
 
 # Tabla de Simbolos | frame der
-label = tk.Label(frame_der, text="Tabla de Símbolos", bg="black", fg="white", font=("Arial", 12))
-label.place(x=10, y=10)
+label = tk.Label(frame_der, text="Tabla de Símbolos", bg="black", fg="white", font=("Arial", 11))
+label.place(x=5, y=5)
+symbol_table = tk.Text(frame_der, bg='black', fg='white', font=("Consolas", 10))
+symbol_table.place(x=1, y=29, width=220, height=564)
 
 
 # Consola de errores | frame inferior
