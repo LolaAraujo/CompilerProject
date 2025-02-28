@@ -24,10 +24,11 @@ except Exception as e:
 #  Verificar la sentencia
 try:
     sentencia = """
-    int x = 10 + 5 
-    float y = x * 3.14
-    z = y - 2 / 4
-    """
+for (int j = 10; j > 0; j -= 2) { 
+    print(j); 
+}
+"""
+
     tree = parser.parse(sentencia)
     
     print("✅ Sentencia válida")

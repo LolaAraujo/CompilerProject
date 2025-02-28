@@ -24,13 +24,15 @@ tipo_dato : "int" | "float" | "bool" | "char" | "string"
             | "class"
             | "enum"
 
-entrada : "read" "(" identificador ")"
-salida : "print" "(" expression ")"
+entrada : "read" "(" identificador ")" ";"
+salida : "print" "(" expression ")" ";"
 
-declaracion : tipo_dato? identificador "=" expression
-constante : "const" tipo_dato? identificador "=" expression
+declaracion : tipo_dato? identificador "=" expression ";"
+constante : "const" tipo_dato? identificador "=" expression ";"
 
 identificador : IDENTIFICADOR
+
+digit : "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 number : digit+
 float_number : digit+ "." digit+
 
@@ -39,7 +41,7 @@ operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTE
 operador_logico : AND | OR | NOT
 operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
 
-expression : term (( PLUS | MINUS ) term)*
+expression : term (( PLUS | MINUS ) term)* ";"
 term : factor (( STAR | SLASH | PERCENT ) factor)*
 factor : number | float_number | identificador | "(" expression ")"
 
@@ -54,25 +56,25 @@ switch : "switch" "(" expression ")" "{" casos "}"
 casos : (case)+ ("default" ":" bloque)?
 case : "case" expression ":" bloque
 
-loop : "for" "(" expression ";" expression ";" expression ")" bloque
+loop : "for" "(" (declaracion | expression) ";" expression ";" expression ")" bloque
        | "while" "(" expression_booleana ")" bloque
-       | "do" bloque "while" "(" expression_booleana ")"
+       | "do" bloque "while" "(" expression_booleana ")" ";"
 
-control_flujo : "break" | "continue" | "return" expression?
+control_flujo : "break" ";" | "continue" ";" | "return" expression? ";"
 
 funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
 parametros : tipo_dato identificador ("," tipo_dato identificador)*
 
 try_catch : "try" bloque "catch" "(" identificador ")" bloque
 
-module : "import" identificador
-exportacion : "export" identificador
+module : "import" identificador ";"
+exportacion : "export" identificador ";"
 
 clase : "class" identificador "{" miembros "}"
 miembros : (tipo_dato identificador ";")* (funcion)*
 herencia : "class" identificador "extends" identificador "{" miembros "}"
 polimorfismo : "override" funcion
-encapsulamiento : ("public" | "private" | "protected") tipo_dato identificador
+encapsulamiento : ("public" | "private" | "protected") tipo_dato identificador ";"
 
 // ✅ DEFINICIÓN DE TOKENS
 IDENTIFICADOR: /[a-zA-Z_][a-zA-Z0-9_]*/
