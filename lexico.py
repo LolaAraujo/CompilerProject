@@ -3,7 +3,7 @@ from lark.exceptions import UnexpectedInput
 import re
 
 # Cargar la gramática desde el archivo
-with open("prueba2.ebnf", "r") as file:
+with open("Gramatica.ebnf", "r") as file:
     grammar = file.read()
 
 # Imprimir las palabras reservadas
