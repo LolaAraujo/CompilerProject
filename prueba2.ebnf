@@ -31,7 +31,8 @@ declaracion : tipo_dato? identificador "=" expression
 constante : "const" tipo_dato? identificador "=" expression
 
 identificador : IDENTIFICADOR
-number : NUMBER
+number : digit+
+float_number : digit+ "." digit+
 
 operador_aritmetico : PLUS | MINUS | STAR | SLASH | PERCENT
 operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTEQUAL
@@ -40,7 +41,7 @@ operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSI
 
 expression : term (( PLUS | MINUS ) term)*
 term : factor (( STAR | SLASH | PERCENT ) factor)*
-factor : number | identificador | "(" expression ")"
+factor : number | float_number | identificador | "(" expression ")"
 
 condicional : "if" "(" expression_booleana ")" bloque ("else" bloque)?
 expression_booleana : expression operador_relacional expression | expression operador_logico expression
@@ -75,7 +76,6 @@ encapsulamiento : ("public" | "private" | "protected") tipo_dato identificador
 
 // ✅ DEFINICIÓN DE TOKENS
 IDENTIFICADOR: /[a-zA-Z_][a-zA-Z0-9_]*/
-NUMBER: /[0-9]+/
 
 PLUS: "+"
 MINUS: "-"
