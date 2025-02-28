@@ -1,0 +1,39 @@
+start: statement+
+
+while_stmt: "while" condition "do" statement+ "end"
+
+if_stmt: "if" condition "then" statement+ "end"
+       | "if" condition "then" statement+ "else" statement+ "end"
+
+condition: expr relop expr
+
+relop: "<" | ">" | "==" | "!=" | "<=" | ">="
+
+statement: assignment | while_stmt | if_stmt | block
+
+block: "{" statement+ "}"
+
+assignment: identifier ":=" expr
+
+expr: expr addop term  -> binary
+    | term
+
+term: term mulop factor -> binary
+    | factor
+
+factor: identifier
+      | number
+      | "(" expr ")"
+
+addop: "+" | "-"
+
+mulop: "*" | "/"
+
+identifier: CNAME
+
+number: SIGNED_NUMBER
+
+%import common.CNAME
+%import common.SIGNED_NUMBER
+%import common.WS
+%ignore WS
