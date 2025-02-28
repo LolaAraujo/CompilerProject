@@ -1,99 +1,108 @@
-type_data : type_specifier declarations
-         | primitive
-         | compuest
-         | user_def
+start: statement+
 
-primitive : "int" | "float" | "bool" | "char"
-compuest : "str" | "arr" | "struc"
+statement : declaracion
+          | constante
+          | entrada
+          | salida
+          | expression
+          | condicional
+          | switch
+          | loop
+          | control_flujo
+          | funcion
+          | try_catch
+          | module
+          | exportacion
+          | clase
+          | herencia
+          | polimorfismo
+          | encapsulamiento
 
-expression : term ( ("+" | "-") term )*
-term : factor ( ("*" | "/") factor )*
-factor : number | "(" expression ")"
-digit : "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-number : digit+
+tipo_dato : "int" | "float" | "bool" | "char" | "string"
+            | "array" "<" tipo_dato ">"
+            | "struct"
+            | "class"
+            | "enum"
 
-user_def : "def_class" | "def_intf" | "def_enum" identifier ":" expression ";"
+entrada : "read" "(" identificador ")"
+salida : "print" "(" expression ")"
 
-asignation : declarator
-declarator : varDec | consDec
-direct_declarator : identifier | "(" declarator ")"
+declaracion : tipo_dato? identificador "=" expression
+constante : "const" tipo_dato? identificador "=" expression
 
-varDec : "var" scope identifier lifeTime ":" type_data "=" expression
-constDec : "const" identifier ":" type_data "=" expression
+identificador : IDENTIFICADOR
+number : NUMBER
 
-scope : "glob" | "loc" | "block"
-lifeTime : "stact" | "dinm"
+operador_aritmetico : PLUS | MINUS | STAR | SLASH | PERCENT
+operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTEQUAL
+operador_logico : AND | OR | NOT
+operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
 
-conditional_expression : expression comparison_operator expression
-assignment_expression : identifier assignment_operator expression
-unary_expression : unary_operator expression
-logic_expression : expression logic_operator expression
+expression : term (( PLUS | MINUS ) term)*
+term : factor (( STAR | SLASH | PERCENT ) factor)*
+factor : number | identificador | "(" expression ")"
 
-assignment_operator : "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<=" | ">=" | "!=" | "==" | "<" | ">"
-unary_operator : "+" | "-" | "*" | "/" | "%"
-logic_operator : "and" | "or" | "!"
+condicional : "if" "(" expression_booleana ")" bloque ("else" bloque)?
+expression_booleana : expression operador_relacional expression | expression operador_logico expression
 
-switch : expression ":" ("case1" expression | "case2" expression | "default" expression) jump_stat ";"
-loop : expression ":" sentencia_expression ";" jump_stat | expression "reload" conditional_expression ":" sentencia_expression jump_stat ";"
+bloque : "{" (declaracion | expression | control_flujo)* "}"
 
-jump_stat : "goto" ";" | "break" ";" | "continue" ";" | "return" expression ";"
+comentario: COMENTARIO_SIMPLE | COMENTARIO_MULTILINEA
 
-type_func : "int" | "float" | "bool" | "char" | "void"
-param : param_dec | param_list "," param_dec
-param_dec : identifier ":" type_data
-arg : expression assignment_operator | expression "," arg assignment_operator
+switch : "switch" "(" expression ")" "{" casos "}"
+casos : (case)+ ("default" ":" bloque)?
+case : "case" expression ":" bloque
 
-coment : "-" short_text
-       | "..." long_text "..."
+loop : "for" "(" expression ";" expression ";" expression ")" bloque
+       | "while" "(" expression_booleana ")" bloque
+       | "do" bloque "while" "(" expression_booleana ")"
 
-document_code : "$" documentation_code "$"
+control_flujo : "break" | "continue" | "return" expression?
 
-try_statm : "try" statment_expression ":" catch conditional_error ";"
-         | "try" statment_expression ":" block except_block "," conditional_error ";"
+funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
+parametros : tipo_dato identificador ("," tipo_dato identificador)*
 
-except : "message" ":" name_expression statment_expression | statment_conditional ";"
-conditional_error : "error" "." New_error "(" "text:" Message_error ")"
+try_catch : "try" bloque "catch" "(" identificador ")" bloque
 
-import : "import" lib | mod
-export : "export" lib | mod identifier
-mod : identifier ".mod" | ".mod" identifier | ".mod" user_def
+module : "import" identificador
+exportacion : "export" identificador
 
-namespace : "namespace" identifier ":" "[" cont_namespace "]"
-depend : "start" mod ";"
+clase : "class" identificador "{" miembros "}"
+miembros : (tipo_dato identificador ";")* (funcion)*
+herencia : "class" identificador "extends" identificador "{" miembros "}"
+polimorfismo : "override" funcion
+encapsulamiento : ("public" | "private" | "protected") tipo_dato identificador
 
-class : "class" identifier ":" classDef "(" param ")" ":" body_statment ";"
-body_statment : attrib metd obj
-attrib : "self" "." identifier "=" expression | identifier "=" expression
-metd : metd identifier ":" statment_expression
-obj : type_data declarator "=" identifier "(" param ")"
+// ✅ DEFINICIÓN DE TOKENS
+IDENTIFICADOR: /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER: /[0-9]+/
 
-classInheritance : "class" identifier "include" identifierOtherClass ":" body_statment ";"
-encapsul : "self" "._" identifier "=" expression | identifier
-get : def_class "get_" declarator ":" "return" encapsul ";"
-set : def_class "set_" declarator ":" encapsul ";"
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+PERCENT: "%"
 
-class_Intf : classIntf identifier ":" "abstract" def_class identifier "[" statm_expression "]"
-class_abst : depend import "ABC" "," "abstract"
-           | identifier ":" "abstract" "[" statm_expression "]"
+LESSTHAN: "<"
+MORETHAN: ">"
+LESSEQUAL: "<="
+MOREEQUAL: ">="
+EQUAL: "=="
+NOTEQUAL: "!="
 
-named_expression : identifier ":" expression
-named_expressions : named_expression | named_expressions "," named_expression
-list : "[" named_expressions "]"
-tup : "(" named_expressions ")"
+AND: "AND"
+OR: "OR"
+NOT: "NOT"
 
-key_value_pair : named_expression ":" named_expression
-key_value_pairs : key_value_pair | key_value_pairs "," key_value_pair
-dic : "{" key_value_pairs "}"
+ASSIGN: "="
+PLUSASSIGN: "+="
+MINUSASSIGN: "-="
+STARASSIGN: "*="
+SLASHASSIGN: "/="
 
-stack : "stack" ":" declarator "=" "New stack" "(" expression ")"
-col : "col" ":" declarator "=" "New col" "(" expression ")"
+// ✅ Comentarios
+COMENTARIO_SIMPLE: /\/\/.*/
+COMENTARIO_MULTILINEA: /\/\*[\s\S]*?\*\//
 
-entry : declarator | identifier "=" "entry" "(" text ")"
-output : prim "(" text "+" entry ")"
-
-openArch : declarator | identifier "." "op" "(" url ")"
-readArch : openArch "." "r" "()"
-writeArch : openArch "." "w" "(" text ")"
-closeArch : openArch "." "cl" "()"
-
-modular : import | def_class "(" param ")" ":" stat_expression ";" | class
+%import common.WS
+%ignore WS
