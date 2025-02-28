@@ -88,14 +88,18 @@ except Exception as e:
 def obtener_lista_tokens(codigo):
     try:
         return [f"{TOKENS_GRAMATICA.get(token.type, token.type)}: {token.value}" for token in parser.lex(codigo)]
+    except UnexpectedInput as e:
+        error_msg = f"Error en la línea {e.line}, columna {e.column}: \n{e.get_context(codigo)}"
+        return [error_msg]
     except Exception as e:
         return [f"Error en el análisis léxico: {str(e)}"]
 
 # Código de prueba
 codigo_prueba = """
-for (int i = 0; i < 5; i += 1) {
-    print("Iteración " + i);
-} """
+int a = 10;
+float b = 3.14;
+string nombre = "Juan";
+a @ 5; """
 
 # Obtener y mostrar tokens
 tokens = obtener_lista_tokens(codigo_prueba)
