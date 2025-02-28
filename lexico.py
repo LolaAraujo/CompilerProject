@@ -24,9 +24,19 @@ except Exception as e:
 #  Verificar la sentencia
 try:
     sentencia = """
-for (int j = 10; j > 0; j -= 2) { 
-    print(j); 
+for (int i = 0; i < 5; i += 1) {
+    print("Iteración " + i);
 }
+
+while (a < 20) {
+    a += 2;
+    print(a);
+}
+
+do {
+    print("Ejecutado al menos una vez");
+} while (a < 50);
+
 """
 
     tree = parser.parse(sentencia)
