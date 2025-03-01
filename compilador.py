@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import *
-from tkinter import PanedWindow, Scrollbar, PhotoImage
+from PIL import Image, ImageTk 
 
 # ----- CONFIGURACIÓN DE LA INTERFAZ -----
 root = tk.Tk()
@@ -55,9 +55,13 @@ frame_inferior.pack(fill="x")
 
 # ----- OBJETOS EN FRAMES -----
 
-button_image = tk.PhotoImage(file="compilar.png")
-compile_button = tk.Button(frame_superior, image=button_image, command=compile_code, width=40, height=40)
-compile_button.pack()
+# ----- Redimensionar imagen -----
+original_image = Image.open("compilar.png")  # Cargar imagen
+resized_image = original_image.resize((40, 40), Image.LANCZOS)  # Redimensionar a 40x40
+imagee = ImageTk.PhotoImage(resized_image)  # Convertir para Tkinter
+
+compile_button = tk.Button(frame_superior, image=imagee, command=compile_code, width=40, height=40, bd=0)
+compile_button.pack(pady=5)
 
 # Canvas para los números de línea
 line_numbers = tk.Text(frame_izq, width=2, bg="black", fg="white", font=("Consolas", 12), padx=5, state="disabled", wrap="none")
