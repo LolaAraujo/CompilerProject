@@ -88,6 +88,7 @@ def update_line_numbers(event=None):
 
 def compile_code():        
     if input_code.get("1.0", "end-1c") == "":
+        console_output.delete("1.0", "end")
         console_output.insert("end", "No hay código para compilar.\n")
         symbol_table.insert("end", "No hay símbolos.\n")
         return
