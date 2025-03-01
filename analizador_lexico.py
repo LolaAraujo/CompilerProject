@@ -85,6 +85,8 @@ def update_line_numbers(event=None):
     line_count = int(input_code.index('end-1c').split('.')[0])  # Número de líneas del Text
     for i in range(1, line_count + 1):
         line_numbers.insert("end", f"{i}\n")  # Insertar los números de línea
+        
+    line_numbers.config(state="disabled")
 
 def compile_code():        
     if input_code.get("1.0", "end-1c") == "":
@@ -179,7 +181,7 @@ line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 # Tabla de Simbolos | frame der
 label = tk.Label(frame_der, text="Tabla de Símbolos", bg="black", fg="white", font=("Arial", 11))
 label.place(x=5, y=5)
-symbol_table = tk.Text(frame_der, bg='black', fg='white', font=("Consolas", 10))
+symbol_table = tk.Text(frame_der, bg='black', fg='white', font=("Consolas", 10), state="disabled")
 symbol_table.place(x=1, y=29, width=220, height=564)
 
 
@@ -201,14 +203,14 @@ with open("Gramatica.ebnf", "r") as file:
 try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
-    console_output.delete("1.0", "end")
-    console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
+    # console_output.delete("1.0", "end")
+    # console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
 
 except Exception as e:
     print("❌ Error en la gramática:")
     print(e)
-    console_output.delete("1.0", "end")
-    console_output.insert("end", f"❌ Error en la gramática: {e}")
+    # console_output.delete("1.0", "end")
+    # console_output.insert("end", f"❌ Error en la gramática: {e}")
     exit()
 
 # def is_tokens_list(res):
