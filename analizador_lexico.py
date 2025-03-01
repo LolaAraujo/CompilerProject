@@ -136,17 +136,17 @@ def insert_tokens_in_symbol_table(tokens):
 
 # ------- FRAMES -------
 # FRAMA PARA ICONOS
-frame_superior = tk.Frame(root, bg="black", height=50, bd=2, relief="sunken")
+frame_superior = tk.Frame(root, bg="lightgray", height=50, bd=2, relief="sunken")
 frame_superior.pack(fill="x")
 
-frame_principal = tk.Frame(root, bg="black")
+frame_principal = tk.Frame(root, bg="lightgray")
 frame_principal.pack(fill="both", expand=True)
 
 # FRAME DE CÓDIGO
-frame_izq = tk.Frame(frame_principal, bg="black", width=550, bd=2, relief="sunken")
+frame_izq = tk.Frame(frame_principal, bg="lightgray", width=550, bd=2, relief="sunken")
 frame_izq.pack(side="left", fill="both", expand=True)
 # FRAME DE TABLA DE SÍMBOLOS
-frame_der = tk.Frame(frame_principal, bg="black", width=250, bd=2, relief="sunken")
+frame_der = tk.Frame(frame_principal, bg="lightgray", width=250, bd=2, relief="sunken")
 frame_der.pack(side="right", fill="y")
 # FRAME DE CONSOLA DE ERRORES
 frame_inferior = tk.Frame(root, bg="lightgray", height=70)
@@ -161,11 +161,11 @@ compile_button = tk.Button(frame_superior, image=imagee, command=compile_code, w
 compile_button.pack(pady=5)
 
 # Canvas para los números de línea
-line_numbers = tk.Text(frame_izq, width=2, bg="black", fg="white", font=("Consolas", 12), padx=5, state="disabled", wrap="none")
+line_numbers = tk.Text(frame_izq, width=2, bg="lightgray", fg="black", font=("Consolas", 12), padx=5, state="disabled", wrap="none")
 line_numbers.pack(side="left", fill="y")
 
 # Entrada de código | frame izq
-input_code = tk.Text(frame_izq, bg='black', fg='white', font=("Consolas", 12))
+input_code = tk.Text(frame_izq, bg='lightgray', fg='black', font=("Consolas", 12))
 input_code.pack(side="left", fill="both", expand=True)
 input_code.bind("<KeyRelease>", update_line_numbers)
 
@@ -177,9 +177,9 @@ line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 
 
 # Tabla de Simbolos | frame der
-label = tk.Label(frame_der, text="Tabla de Símbolos", bg="black", fg="white", font=("Arial", 11))
+label = tk.Label(frame_der, text="Tabla de Símbolos", bg="lightgray", fg="black", font=("Arial", 11))
 label.place(x=5, y=5)
-symbol_table = tk.Text(frame_der, bg='black', fg='white', font=("Consolas", 10), state="disabled")
+symbol_table = tk.Text(frame_der, bg='lightgray', fg='black', font=("Consolas", 10), state="disabled")
 symbol_table.place(x=1, y=29, width=220, height=564)
 
 
