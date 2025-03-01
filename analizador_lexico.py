@@ -102,8 +102,8 @@ def compile_code():
 
 def show_compiling_complete(tokens):
     console_output.delete("1.0", "end")
+    symbol_table.delete("1.0","end")
     if not es_error(tokens):
-        symbol_table.delete("1.0","end")
         #print(tokens)
         insert_tokens_in_symbol_table(tokens)
         console_output.insert("end","Compilacion completada. \n")
