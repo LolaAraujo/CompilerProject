@@ -16,6 +16,7 @@ def update_line_numbers(event=None):
     for i in range(1, line_count + 1):
         line_numbers.insert("end", f"{i}\n")  # Insertar los números de línea
 
+#Función para compilar el código
 def compile_code():
     """Simulación de compilación."""
         
@@ -54,12 +55,10 @@ frame_inferior = tk.Frame(root, bg="lightgray", height=70)
 frame_inferior.pack(fill="x")
 
 # ----- OBJETOS EN FRAMES -----
-
 # ----- Redimensionar imagen -----
 original_image = Image.open("compilar.png")  # Cargar imagen
 resized_image = original_image.resize((40, 40), Image.LANCZOS)  # Redimensionar a 40x40
 imagee = ImageTk.PhotoImage(resized_image)  # Convertir para Tkinter
-
 compile_button = tk.Button(frame_superior, image=imagee, command=compile_code, width=40, height=40, bd=0)
 compile_button.pack(pady=5)
 
