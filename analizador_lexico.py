@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 # Analizador Léxico con Interfaz Gráfica para Compiladores
 # Equipo:
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
 # Fernando de Jesus Rivera Reos 
 # Fecha Creación: 20/02/2025
+=======
+# Integrantes: Fabian Gutierrez Gachuz 218506653, Fernando y Maria Dolores Cervantes Araujo 
+>>>>>>> 3084fb0fa39b8bdf2206efcefc7c128ecf96c4ea
 
 import tkinter as tk
 from tkinter import *
