@@ -1,3 +1,10 @@
+# Analizador Léxico con Interfaz Gráfica para Compiladores
+# Equipo:
+# Maria Dolores Cervantes Araujo
+# Fabian Gutierrez Gachuz
+# Fernando de Jesus Rivera Reos 
+# Fecha Creación: 20/02/2025
+
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk 
