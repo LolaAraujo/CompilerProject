@@ -71,10 +71,6 @@ TOKENS_GRAMATICA = {
 with open("Gramatica.ebnf", "r") as file:
     grammar = file.read()
 
-# Cargar la gramática desde el archivo
-with open("Gramatica.ebnf", "r") as file:
-    grammar = file.read()
-
 # Crear el parser con Lark
 try:
     parser = Lark(grammar, parser="lalr", start="start")
@@ -87,7 +83,15 @@ except Exception as e:
 # Función para obtener lista de tokens
 def obtener_lista_tokens(codigo):
     try:
-        return [f"{TOKENS_GRAMATICA.get(token.type, token.type)}: {token.value}" for token in parser.lex(codigo)]
+        tokens = list(parser.lex(codigo))
+        resultado = []
+        sentencia_id = 1
+        for i, token in enumerate(tokens):
+            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
+            resultado.append(f"{sentencia_id}.{i+1} {tipo_token}: {token.value}")
+            if token.type == "SEMICOLON":  # Detectar fin de sentencia
+                sentencia_id += 1
+        return resultado
     except UnexpectedInput as e:
         error_msg = f"Error en la línea {e.line}, columna {e.column}: \n{e.get_context(codigo)}"
         return [error_msg]
@@ -99,7 +103,7 @@ codigo_prueba = """
 int a = 10;
 float b = 3.14;
 string nombre = "Juan";
-a @ 5; """
+"""
 
 # Obtener y mostrar tokens
 tokens = obtener_lista_tokens(codigo_prueba)
