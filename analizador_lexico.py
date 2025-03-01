@@ -93,7 +93,9 @@ def compile_code():
         return
     
     console_output.delete("1.0", "end")
-    symbol_table.delete("1.0", "end")
+    symbol_table.config(state="normal")
+    symbol_table.delete("1.0","end")
+    symbol_table.config(state="disabled")
     console_output.insert("end", "Compilando...\n")
 
     tokens  = obtener_lista_tokens(input_code.get("1.0", "end-1c"))
@@ -102,7 +104,9 @@ def compile_code():
 
 def show_compiling_complete(tokens):
     console_output.delete("1.0", "end")
+    symbol_table.config(state="normal")
     symbol_table.delete("1.0","end")
+    symbol_table.config(state="disabled")
     
     if not es_error(tokens):
         #print(tokens)
