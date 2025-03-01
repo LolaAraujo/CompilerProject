@@ -1,3 +1,5 @@
+# Integrantes: Fabian Gutierrez Gachuz 218506653, Fernando y Maria Dolores Cervantes Araujo 
+
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk 
