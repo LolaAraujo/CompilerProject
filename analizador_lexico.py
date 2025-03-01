@@ -195,14 +195,14 @@ with open("Gramatica.ebnf", "r") as file:
 try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
-    console_output.delete("1.0", "end")
-    console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
+    # console_output.delete("1.0", "end")
+    # console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
 
 except Exception as e:
     print("❌ Error en la gramática:")
     print(e)
-    console_output.delete("1.0", "end")
-    console_output.insert("end", f"❌ Error en la gramática: {e}")
+    # console_output.delete("1.0", "end")
+    # console_output.insert("end", f"❌ Error en la gramática: {e}")
     exit()
 
 # def is_tokens_list(res):
