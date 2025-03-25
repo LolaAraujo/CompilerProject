@@ -1,86 +1,30 @@
-import os
-import sys
-from DHParser.parse import compile_ebnf
-from DHParser.testing import ParsingTester
+#Vale verga mi vida y este codigo 
+from DHParser import compile_ebnf
 
-#  Cargar la gramática desde el archivo EBNF
-GRAMATICA_ARCHIVO = "gramatica.ebnf"
-
-# Verificar si el archivo de gramática existe
-if not os.path.exists(GRAMATICA_ARCHIVO):
-    print(f" Error: No se encontró el archivo {GRAMATICA_ARCHIVO}")
-    sys.exit(1)
-
-# Compilar la gramática desde el archivo
-with open(GRAMATICA_ARCHIVO, "r", encoding="utf-8") as file:
-    gramatica_texto = file.read()
-
-parser_factory = compile_ebnf(gramatica_texto, start_symbol="start")
-
-#  Función para analizar código y detectar errores
-def analizar_codigo(codigo_fuente):
-    parser = parser_factory()
-    result = parser.parse(codigo_fuente)
-
-    if result.errors:
-        print("\n Se encontraron errores sintácticos:\n")
-        mostrar_errores(result.errors, codigo_fuente)
-    else:
-        print("\n Código analizado correctamente. No hay errores.")
-
-#  Mostrar errores con formato personalizado
-def mostrar_errores(errors, codigo_fuente):
-    lineas = codigo_fuente.split("\n")
-
-    for i, error in enumerate(errors, start=1):
-        linea_error = error.line
-        columna_error = error.col
-        mensaje = error.message
-        palabra_erronea = error.symbol  # Token problemático
-
-        # Obtener la línea de código con el error
-        linea_codigo = lineas[linea_error - 1] if 0 < linea_error <= len(lineas) else ""
-
-        # Crear un puntero visual para el error
-        puntero = " " * (columna_error - 1) + "^"
-
-        # Generar sugerencias
-        sugerencias = generar_sugerencias(mensaje)
-
-        # Mostrar error con formato personalizado
-        print(f"ERROR {i}:")
-        print(f"    Ubicación: Línea {linea_error}, Columna {columna_error}")
-        print(f"    Sujeto: '{palabra_erronea}'")
-        print(f"    Tipo: {mensaje}")
-        print(f"    Línea {linea_error}: {linea_codigo.strip()}")
-        print(f"    {puntero}")
-        print(f"    Posible solución: {sugerencias}\n")
-
-#  Generar sugerencias de solución
-def generar_sugerencias(mensaje):
-    sugerencias_generales = [
-        "Revisa la sintaxis de la estructura.",
-        "Verifica si falta un punto y coma ';' al final.",
-        "Asegúrate de que las llaves '{ }' estén balanceadas.",
-        "Confirma que el nombre de variables y funciones esté bien escrito.",
-        "Mira si falta un paréntesis '()' o una comilla '\"'."
-    ]
-
-    if "expected" in mensaje:
-        sugerencia = f"Se esperaba: {mensaje.split('expected')[-1].strip()}."
-    elif "unexpected" in mensaje:
-        sugerencia = "Revisa si hay caracteres extraños o mal escritos."
-    else:
-        sugerencia = sugerencias_generales[0]
-
-    return f"{sugerencia} Otra posible solución: {sugerencias_generales[1:]}"
-
-#  Código de prueba
-codigo_prueba = """
-int a = 10
-float b = 3.14
-string nombre = "Juan;
+# Definir una gramática EBNF simple
+ebnf_grammar = """
+expression = term ("+" term | "-" term)* ;
+term       = factor ("*" factor | "/" factor)* ;
+factor     = /\d+/ ;
 """
 
-#  Ejecutar análisis sintáctico
-analizar_codigo(codigo_prueba)
+# Compilar la gramática usando DHParser
+parser_factory = compile_ebnf(ebnf_grammar, start_symbol="expression")
+
+# Crear el parser a partir de la gramática compilada
+parser = parser_factory()
+
+# Código de prueba
+codigo_prueba = "3 + 5 * 2"
+
+# Analizar el código
+resultado = parser.parse(codigo_prueba)
+
+# Verificar si hay errores
+if resultado.errors:
+    print("\nSe encontraron errores en el análisis sintáctico:\n")
+    for error in resultado.errors:
+        print(f"Error: {error.message} en línea {error.line}, columna {error.col}")
+else:
+    print("\n✅ Análisis sintáctico exitoso. Árbol generado:\n")
+    print(resultado.as_xml())
