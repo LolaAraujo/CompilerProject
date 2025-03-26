@@ -76,8 +76,7 @@ try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
 except Exception as e:
-    print("❌ Error en la gramática:")
-    print(e)
+    print("❌ Error en la gramática:", e)
     exit()
 
 # Función para obtener lista de tokens

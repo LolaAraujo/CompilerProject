@@ -1,0 +1,4 @@
+
+@ @IGNORECASE
+EXPRESSION     = TERM ('+' TERM)*
+TERM          = /d+/ 
