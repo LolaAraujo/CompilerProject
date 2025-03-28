@@ -2,15 +2,15 @@
 # Equipo:
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
-# Fernando de Jesus Rivera Reos 
+# Fernando de Jesus Rivera Reos
 # Update: 27/03/2025
 
 import tkinter as tk
 from tkinter import *
-from PIL import Image, ImageTk 
+from PIL import Image, ImageTk
 from lark import Lark
 from lark.exceptions import UnexpectedInput
-import re 
+import re
 from tkinter import Toplevel
 from tkinter import messagebox
 import os
@@ -22,56 +22,56 @@ class SymbolTable:
     def __init__(self, max_memory_size=100):
         """
         Initialize the Symbol Table with memory management
-        
+
         Args:
             max_memory_size (int): Maximum memory size in bytes for in-memory storage
         """
         # In-memory storage for symbols
         self.symbols = {}
-        
+
         # Maximum memory size for in-memory storage
         self.max_memory_size = max_memory_size
-        
+
         # Secondary storage file path
         self.secondary_storage_path = "symbol_table_overflow.json"
-        
+
         # Ensure the secondary storage file exists
         open(self.secondary_storage_path, 'a').close()
-    
+
     def _is_memory_available(self, symbol_size):
         """
         Check if there's enough memory to store the symbol
-        
+
         Args:
             symbol_size (int): Size of the symbol to be stored
-        
+
         Returns:
             bool: True if memory is available, False otherwise
         """
         current_memory_usage = sum(len(json.dumps(symbol)) for symbol in self.symbols.values())
         return current_memory_usage + symbol_size <= self.max_memory_size
-    
+
     def add_symbol(self, identifier, details):
         """
         Add a symbol to the table, managing memory automatically
-        
+
         Args:
             identifier (str): The symbol's identifier
             details (dict): Detailed information about the symbol
         """
         symbol_size = len(json.dumps(details))
-        
+
         if not self._is_memory_available(symbol_size):
             # If memory is full, move to secondary storage
             self._move_to_secondary_storage(identifier, details)
         else:
             # Store in memory
             self.symbols[identifier] = details
-    
+
     def _move_to_secondary_storage(self, identifier, details):
         """
         Move symbol to secondary storage
-        
+
         Args:
             identifier (str): The symbol's identifier
             details (dict): Detailed information about the symbol
@@ -82,30 +82,30 @@ class SymbolTable:
                     storage = json.load(f)
                 except json.JSONDecodeError:
                     storage = {}
-                
+
                 storage[identifier] = details
-                
+
                 # Reset file pointer and truncate
                 f.seek(0)
                 json.dump(storage, f, indent=2)
                 f.truncate()
         except Exception as e:
             print(f"Error in secondary storage: {e}")
-    
+
     def get_symbol(self, identifier):
         """
         Retrieve a symbol from memory or secondary storage
-        
+
         Args:
             identifier (str): The symbol's identifier
-        
+
         Returns:
             dict: Symbol details or None if not found
         """
         # First check in-memory symbols
         if identifier in self.symbols:
             return self.symbols[identifier]
-        
+
         # If not in memory, check secondary storage
         try:
             with open(self.secondary_storage_path, 'r') as f:
@@ -113,16 +113,16 @@ class SymbolTable:
                 return storage.get(identifier)
         except (FileNotFoundError, json.JSONDecodeError):
             return None
-    
+
     def get_all_symbols(self):
         """
         Retrieve all symbols from memory and secondary storage
-        
+
         Returns:
             dict: All symbols in the table
         """
         all_symbols = dict(self.symbols)
-        
+
         try:
             with open(self.secondary_storage_path, 'r') as f:
                 try:
@@ -132,15 +132,56 @@ class SymbolTable:
                     pass
         except FileNotFoundError:
             pass
-        
+
         return all_symbols
     
+    # Funciones locales para inferir tipo y valor
+    def infer_type(self, token_type,identifier):
+        # Obtenemos la categoría del token
+        token_category = TOKENS_GRAMATICA.get(token_type, None)
+        
+        # Asignación directa de tipos basada en tu gramática
+        if token_category in ["ENTERO", "NUMERO"]:
+            return "entero"
+        elif token_category in ["FLOTANTE", "NUMERO FLOTANTE"]:
+            return "real"
+        elif token_category == "BOOLEANO":
+            return "booleano"
+        elif token_category in ["CARACTER", "CADENA"]:
+            return "cadena"
+        elif token_category == "ARREGLO":
+            return "arreglo"
+        # Para identificadores (variables/funciones)
+        if token_type == "IDENTIFICADOR":
+            # Verificamos si es una función conocida
+            if identifier in ["void", "print", "main", "read"]:
+                return "función"
+            
+            # Inferencia por convenciones de nombre
+            lower_id = identifier.lower()
+            if lower_id.startswith(('is_', 'has_', 'can_')): 
+                return "booleano"
+            elif lower_id.endswith(('count', 'total', 'num', 'id', 'index')):
+                return "entero"
+            elif lower_id.endswith(('price', 'amount', 'value', 'sum', 'avg')):
+                return "real"
+            elif lower_id.endswith(('name', 'text', 'msg', 'title')):
+                return "cadena"
+        
+        return "variable"  # Valor por defecto
+    
+    def get_value(self, identifier, token_value=None):
+        """Obtiene el valor inicial si está disponible"""
+        if token_value:
+            return token_value
+        return "No inicializado"
+
     def clear(self):
         """
         Clear all symbols from memory and secondary storage
         """
         self.symbols.clear()
-        
+
         # Clear secondary storage file
         open(self.secondary_storage_path, 'w').close()
 
@@ -148,69 +189,157 @@ class SymbolTable:
 def show_symbol_table():
     """Creates a pop-up window for the symbol table"""
     global tokens_list, symbol_table_instance
-    
+
     if not tokens_list:
         messagebox.showinfo("Información", "No hay tokens para mostrar.")
         return
-    
+
     pop_up = tk.Toplevel(root)
     pop_up.title("Tabla de Símbolos")
-    pop_up.geometry("1050x550")
-    
-    
+    pop_up.geometry("1070x550")
+
+
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
     label.pack()
-    
+
     symbol_table_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     symbol_table_popup.pack(expand=True, fill="both")
-    
+
     # Headers
     headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección" ,"Línea", "Valor","Estado", "Estructura", "Uso"]
-    header_format = "{:<20} {:<20} {:<15} {:<15} {:<15} {:<10} {:10} {:10} {:15} {:10}\n".format(*headers)
+    header_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:10} {:10} {:15} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
-    symbol_table_popup.insert("end", "-" * 148 + "\n")
+    symbol_table_popup.insert("end", "-" * 150 + "\n")
     
-    # Process tokens and populate symbol table
+    print("Tokens List: ", tokens_list)
+    # Count the usage of each identifier
+    usage_count = {}
     for token in tokens_list:
         parts = token.split(": ")
         if len(parts) == 3:
-            line_number,type, details = parts[0], parts[1], parts[2]
+            _, token_type, value = parts
+            key = f"{token_type}:{value}"
+            usage_count[key] = usage_count.get(key, 0) + 1
             
-            # Basic symbol details (you'll want to enhance this with more comprehensive parsing)
-            symbol_details = {
-                "Identificador": details,
-                "Categoría": "Token",
-                "Tipo": type,
-                "Ámbito": "Global",
-                "Dirección": "0x0000",
-                "Línea": line_number,
-                "Valor": details,
-                "Estado": "Declarado",
-                "Estructura": "N/A",
-                "Uso": "0"
-            }
+    print("Usage Count: ", usage_count)
+
+    # Initialize a set to keep track of processed identifiers
+    processed_identifiers = set()
+    for token in tokens_list:
+        try:
+            parts = token.split(": ")
+            if len(parts) == 3:
+                line_number, token_type, identifier = parts
+                
+                # Solo procesamos identificadores no vistos
+                # if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
+                    
+                #     # Determinar categoría basada en el token
+                #     if identifier in ["main", "print", "void", "read"]:
+                #         category = "FUNCIÓN"
+                #     else:
+                #         category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
+                        
+                #     # Detección básica de declaraciones (mejorable)
+                #     is_declaration = any(
+                #         t for t in tokens_list 
+                #         if f"{identifier}:" in t and "DECLARACION" in t
+                #     )
+                category = TOKENS_GRAMATICA.get(token_type, token_type)
+                symbol_details = {
+                    "Identificador": identifier,
+                    "Categoría": category,
+                    "Tipo": symbol_table_instance.infer_type(token_type, identifier),
+                    "Ámbito": "Global" if identifier == "global" else "Local",
+                    "Dirección": f"0x{abs(hash(identifier)):08X}",
+                    "Línea": line_number,
+                    "Valor": symbol_table_instance.get_value(identifier),
+                    "Estado": "Declarado",# if is_declaration else "Usado",
+                    "Uso": usage_count.get(identifier, 1)
+                }
+                
+    # for token in tokens_list:
+    #     parts = token.split(": ")
+    #     if len(parts) == 3:
+    #         line_number,type, details = parts[0], parts[1], parts[2]
             
-            # Add symbol to symbol table instance
-            symbol_table_instance.add_symbol(details, symbol_details)
-            
-            # Format for display
-            row_format = "{:<20} {:<20} {:<15} {:<15} {:<15} {:<10} {:10} {:10} {:15} {:10}\n".format(
-                symbol_details["Identificador"][:20],
-                symbol_details["Categoría"][:20],
-                symbol_details["Tipo"][:15],
-                symbol_details["Ámbito"][:15],
-                symbol_details["Dirección"][:15],
-                symbol_details["Línea"][:10],
-                symbol_details["Valor"][:10],
-                symbol_details["Estado"][:10],
-                symbol_details["Estructura"][:15],
-                symbol_details["Uso"][:10]
+    #         print("Token: ", token)
+    #         # Solo procesamos identificadores que no hayamos procesado antes
+    #         if type == "IDENTIFICADOR" and details not in processed_identifiers:
+    #             processed_identifiers.add(details)
+
+    #             symbol_details = {
+    #                 "Identificador": details,
+    #                 "Categoría": "Token",
+    #                 "Tipo": type,
+    #                 "Ámbito": "Global" if details == "global" else "Local",
+    #                 "Dirección": f"0x{abs(hash(details)):08X}",
+    #                 "Línea": line_number,
+    #                 "Valor": details,
+    #                 "Estado": "Declarado",
+    #                 "Estructura": "N/A",
+    #                 "Uso": usage_count.get(details, 1)  # Usamos el contador que calculamos antes
+    #             }
+
+                symbol_table_instance.add_symbol(identifier, symbol_details)
+        except Exception as e:
+            print(f"Error procesando token {token}: {str(e)}")
+            continue
+   
+    all_symbols = symbol_table_instance.get_all_symbols()
+    for identifier, symbol in all_symbols.items():
+        try: 
+            row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:10} {:10} {:15} {:10}\n".format(
+                symbol.get("Identificador", "")[:20],
+                symbol.get("Categoría", "")[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Ámbito", "")[:15],
+                symbol.get("Dirección", "0x0000")[:15],
+                symbol.get("Línea", "")[:10],
+                symbol.get("Valor", "")[:10],
+                symbol.get("Estado", "")[:10],
+                symbol.get("Estructura", "")[:15],
+                str(symbol.get("Uso", 0))[:10]  # Aseguramos que sea string para el formato
             )
             symbol_table_popup.insert("end", row_format)
-    
+        except Exception as e:
+            print(f"Error mostrando símbolo {identifier}: {str(e)}")
+            continue
+
     symbol_table_popup.config(state="disabled")
 
 symbol_table_instance = SymbolTable()
+
+# var a;
+# void main(){
+# 	a=1;
+# 	b=a+4;
+# 	print(b);
+# }
+
+def show_ats_tree():
+    """Creates a pop-up window for the ATS tree"""
+    global tokens_list
+
+    if not tokens_list:
+        messagebox.showinfo("Información", "No hay tokens para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Árbol ATS")
+    pop_up.geometry("1050x550")
+
+    label = tk.Label(pop_up, text="Árbol ATS", font=("Arial", 11))
+    label.pack()
+
+    ats_tree_text = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    ats_tree_text.pack(expand=True, fill="both")
+
+    # Display the ATS tree (for now, just showing the tokens)
+    ats_tree_text.insert("end", "\n".join(tokens_list))
+
+    ats_tree_text.config(state="disabled")
+
 
 TOKENS_GRAMATICA = {
     "INT": "ENTERO",
@@ -220,27 +349,28 @@ TOKENS_GRAMATICA = {
     "STRING": "CADENA",
     "ARRAY": "ARREGLO",
     "STRUCT": "PALABRA RESERVADA",
-    "ENUM": "PALABRA RESERVADA",
     "VOID": "PALABRA RESERVADA",
-    "READ": "PALABRA RESERVADA",
+    "MAIN": "PALABRA RESERVADA",
+    "FUNC": "DECLARACION FUNCION",
+    "READ": "FUNCION",
     "PRINT": "PALABRA RESERVADA",
-    "IF": "PALABRA RESERVADA",
-    "ELSE": "PALABRA RESERVADA",
-    "SWITCH": "PALABRA RESERVADA",
-    "CASE": "PALABRA RESERVADA",
-    "DEFAULT": "PALABRA RESERVADA",
-    "BREAK": "PALABRA RESERVADA",
-    "FOR": "PALABRA RESERVADA",
-    "WHILE": "PALABRA RESERVADA",
-    "DO": "PALABRA RESERVADA",
-    "CONTINUE": "PALABRA RESERVADA",
-    "RETURN": "PALABRA RESERVADA",
-    "FUNC": "PALABRA RESERVADA",
-    "TRY": "PALABRA RESERVADA",
-    "CATCH": "PALABRA RESERVADA",
-    "IMPORT": "PALABRA RESERVADA",
-    "EXPORT": "PALABRA RESERVADA",
-    "CONST": "PALABRA RESERVADA",
+    "IF": "CONTROL",
+    "ELSE": "CONTROL",
+    "SWITCH": "CONTROL",
+    "CASE": "CONTROL",
+    "DEFAULT": "CONTROL",
+    "FOR": "CONTROL",
+    "WHILE": "CONTROL",
+    "DO": "CONTROL",
+    "BREAK": "CONTROL",
+    "CONTINUE": "CONTROL",
+    "RETURN": "CONTROL",
+    "TRY": "CONTROL",
+    "CATCH": "CONTROL",
+    "CONST": "MODIFICADOR",
+    "IMPORT": "PAQUETE",
+    "EXPORT": "PAQUETE",
+    "ENUM": "AGRUPDOR",
     "IDENTIFICADOR": "IDENTIFICADOR",
     "NUMBER": "NUMERO",
     "FLOAT_NUMBER": "NUMERO FLOTANTE",
@@ -290,10 +420,10 @@ def update_line_numbers(event=None):
     line_count = int(input_code.index('end-1c').split('.')[0])  # Número de líneas del Text
     for i in range(1, line_count + 1):
         line_numbers.insert("end", f"{i}\n")  # Insertar los números de línea
-        
+
     line_numbers.config(state="disabled")
 
-def compile_code():        
+def compile_code():
     if input_code.get("1.0", "end-1c") == "":
         console_output.delete("1.0", "end")
         console_output.insert("end", "No hay código para compilar.\n")
@@ -301,15 +431,17 @@ def compile_code():
         # symbol_table.insert("end", "No hay símbolos.\n")
         # symbol_table.config(state="disabled")
         return
-    
+
     console_output.delete("1.0", "end")
+    symbol_table_instance.clear()
+    tokens_list.clear()
     # symbol_table.config(state="normal")
     # symbol_table.delete("1.0","end")
     # symbol_table.config(state="disabled")
     console_output.insert("end", "Compilando...\n")
 
     tokens  = obtener_lista_tokens(input_code.get("1.0", "end-1c"))
-   
+
     root.after(2000, show_compiling_complete(tokens))  # Llamar a la función después de 2 segundos
 
 def show_compiling_complete(tokens):
@@ -318,8 +450,7 @@ def show_compiling_complete(tokens):
     # symbol_table.delete("1.0","end")
     # symbol_table.config(state="disabled")
     global tokens_list
-    tokens_list = tokens   
-    print(tokens_list) 
+    tokens_list = tokens
     if not es_error(tokens):
         #print(tokens)
         #insert_tokens_in_symbol_table(tokens)
@@ -354,6 +485,8 @@ compile_button = tk.Button(frame_superior, image=imagee, command=compile_code, w
 compile_button.pack(pady=5)
 symbol_table_button = tk.Button(frame_superior, text="Tabla de Simbolos", command=show_symbol_table)
 symbol_table_button.pack(side="right", padx=10, pady=5)
+ats_buttun = tk.Button(frame_superior, text="ATS", command=show_ats_tree)
+ats_buttun.pack(side="right", padx=10, pady=5)
 
 # Canvas para los números de línea
 line_numbers = tk.Text(frame_izq, width=2, bg="lightgray", fg="black", font=("Consolas", 12), padx=5, state="disabled", wrap="none")
@@ -419,18 +552,18 @@ def obtener_lista_tokens(codigo):
         resultado = []
         sentencia_id = 1
         for i, token in enumerate(tokens):
+            # Usar el tipo de token directamente si no está en TOKENS_GRAMATICA
             tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
             resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
             if token.type == "SEMICOLON":  # Detectar fin de sentencia
                 sentencia_id += 1
-        print(resultado)
         return resultado
     except UnexpectedInput as e:
         error_msg = f"Error en la línea {e.line}, columna {e.column}: \n{e.get_context(codigo)}"
         return [error_msg]
     except Exception as e:
         return [f"Error en el análisis léxico: {str(e)}"]
-    
+
 
 update_line_numbers()
 
