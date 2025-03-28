@@ -4,10 +4,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x70E2C71DA053078B",
+    "Direcci\u00f3n": "0x53445012104A3F49",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
-    "Estado": "Declarado",
+    "Estado": "Usado",
     "Uso": 1
   },
   "a": {
@@ -15,98 +15,21 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x2FDD093E52685984",
+    "Direcci\u00f3n": "0x16BB1D96434B8EEA",
     "L\u00ednea": "3",
     "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  ";": {
-    "Identificador": ";",
-    "Categor\u00eda": "PUNTO Y COMA",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x496E9890D430B907",
-    "L\u00ednea": "4",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "void": {
-    "Identificador": "void",
-    "Categor\u00eda": "PALABRA RESERVADA",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x32BCA264C859DEE9",
-    "L\u00ednea": "2",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
+    "Estado": "Usado",
+    "Uso": 3
   },
   "main": {
     "Identificador": "main",
-    "Categor\u00eda": "IDENTIFICADOR",
-    "Tipo": "funci\u00f3n",
+    "Categor\u00eda": "FUNCI\u00d3N",
+    "Tipo": "nombre funci\u00f3n",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x33977A0C39E2264A",
+    "Direcci\u00f3n": "0x92D8BD630100B85",
     "L\u00ednea": "2",
     "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "(": {
-    "Identificador": "(",
-    "Categor\u00eda": "PARENTESIS INICIO",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x288DF27631409396",
-    "L\u00ednea": "4",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  ")": {
-    "Identificador": ")",
-    "Categor\u00eda": "PARENTESIS CIERRE",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x1B3B14BEE54445F5",
-    "L\u00ednea": "4",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "{": {
-    "Identificador": "{",
-    "Categor\u00eda": "LLAVE INICIO",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x4022A451283BFE9D",
-    "L\u00ednea": "2",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "=": {
-    "Identificador": "=",
-    "Categor\u00eda": "ASIGNACION",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0xFA12CA4F9E8C4BA",
-    "L\u00ednea": "3",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "1": {
-    "Identificador": "1",
-    "Categor\u00eda": "NUMERO",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x31AA82978FF508FD",
-    "L\u00ednea": "2",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
+    "Estado": "Usado",
     "Uso": 1
   },
   "b": {
@@ -114,54 +37,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x478B2EE984F0C4F5",
+    "Direcci\u00f3n": "0x28BF280AD744445E",
     "L\u00ednea": "4",
     "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "+": {
-    "Identificador": "+",
-    "Categor\u00eda": "MAS",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x62DAF86EF514FA9",
-    "L\u00ednea": "3",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "4": {
-    "Identificador": "4",
-    "Categor\u00eda": "__ANON_5",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x3AA588839B346889",
-    "L\u00ednea": "3",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "print": {
-    "Identificador": "print",
-    "Categor\u00eda": "PALABRA RESERVADA",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x6F8CC50B8EC406F1",
-    "L\u00ednea": "4",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
-  },
-  "}": {
-    "Identificador": "}",
-    "Categor\u00eda": "LLAVE CIERRE",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x5C9407C19FCA3AC2",
-    "L\u00ednea": "5",
-    "Valor": "No inicializado",
-    "Estado": "Declarado",
-    "Uso": 1
+    "Estado": "Usado",
+    "Uso": 2
   }
 }

@@ -154,8 +154,12 @@ class SymbolTable:
         # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
-            if identifier in ["void", "print", "main", "read"]:
+            if identifier in ["void", "read"]:
                 return "función"
+            elif identifier in ["print"]:
+                return "función de salida"
+            elif identifier in ["main"]:
+                return "nombre función"
             
             # Inferencia por convenciones de nombre
             lower_id = identifier.lower()
@@ -216,10 +220,9 @@ def show_symbol_table():
     usage_count = {}
     for token in tokens_list:
         parts = token.split(": ")
-        if len(parts) == 3:
-            _, token_type, value = parts
-            key = f"{token_type}:{value}"
-            usage_count[key] = usage_count.get(key, 0) + 1
+        if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
+            identifier = parts[2]
+            usage_count[identifier] = usage_count.get(identifier, 0) + 1
             
     print("Usage Count: ", usage_count)
 
@@ -232,31 +235,31 @@ def show_symbol_table():
                 line_number, token_type, identifier = parts
                 
                 # Solo procesamos identificadores no vistos
-                # if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
+                if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
                     
-                #     # Determinar categoría basada en el token
-                #     if identifier in ["main", "print", "void", "read"]:
-                #         category = "FUNCIÓN"
-                #     else:
-                #         category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
+                    # Determinar categoría basada en el token
+                    if identifier in ["main", "print", "void", "read"]:
+                        category = "FUNCIÓN"
+                    else:
+                        category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
                         
-                #     # Detección básica de declaraciones (mejorable)
-                #     is_declaration = any(
-                #         t for t in tokens_list 
-                #         if f"{identifier}:" in t and "DECLARACION" in t
-                #     )
-                category = TOKENS_GRAMATICA.get(token_type, token_type)
-                symbol_details = {
-                    "Identificador": identifier,
-                    "Categoría": category,
-                    "Tipo": symbol_table_instance.infer_type(token_type, identifier),
-                    "Ámbito": "Global" if identifier == "global" else "Local",
-                    "Dirección": f"0x{abs(hash(identifier)):08X}",
-                    "Línea": line_number,
-                    "Valor": symbol_table_instance.get_value(identifier),
-                    "Estado": "Declarado",# if is_declaration else "Usado",
-                    "Uso": usage_count.get(identifier, 1)
-                }
+                    # Detección básica de declaraciones (mejorable)
+                    is_declaration = any(
+                        t for t in tokens_list 
+                        if f"{identifier}:" in t and "DECLARACION" in t
+                    )
+                    
+                    symbol_details = {
+                        "Identificador": identifier,
+                        "Categoría": category,
+                        "Tipo": symbol_table_instance.infer_type(token_type, identifier),
+                        "Ámbito": "Global" if identifier == "global" else "Local",
+                        "Dirección": f"0x{abs(hash(identifier)):08X}",
+                        "Línea": line_number,
+                        "Valor": symbol_table_instance.get_value(identifier),
+                        "Estado": "Declarado" if is_declaration else "Usado",
+                        "Uso": usage_count.get(identifier, 1)
+                    }
                 
     # for token in tokens_list:
     #     parts = token.split(": ")
@@ -281,7 +284,7 @@ def show_symbol_table():
     #                 "Uso": usage_count.get(details, 1)  # Usamos el contador que calculamos antes
     #             }
 
-                symbol_table_instance.add_symbol(identifier, symbol_details)
+                    symbol_table_instance.add_symbol(identifier, symbol_details)
         except Exception as e:
             print(f"Error procesando token {token}: {str(e)}")
             continue
@@ -552,11 +555,11 @@ def obtener_lista_tokens(codigo):
         resultado = []
         sentencia_id = 1
         for i, token in enumerate(tokens):
-            # Usar el tipo de token directamente si no está en TOKENS_GRAMATICA
             tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
             resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
             if token.type == "SEMICOLON":  # Detectar fin de sentencia
                 sentencia_id += 1
+        # print(resultado)
         return resultado
     except UnexpectedInput as e:
         error_msg = f"Error en la línea {e.line}, columna {e.column}: \n{e.get_context(codigo)}"
