@@ -1,9 +1,9 @@
-# Analizador Léxico con Interfaz Gráfica para Compiladores
+# Analizador Sintáctico con Interfaz Gráfica para Compiladores
 # Equipo:
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
 # Fernando de Jesus Rivera Reos 
-# Fecha Creación: 20/02/2025
+# Update: 27/03/2025
 
 import tkinter as tk
 from tkinter import *
@@ -164,8 +164,8 @@ def show_symbol_table():
     symbol_table_popup.pack(expand=True, fill="both")
     
     # Headers
-    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Línea", "Estado"]
-    header_format = "{:<20} {:<20} {:<15} {:<15} {:<10} {:<10}\n".format(*headers)
+    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección de Memoria" ,"Línea", "Valor","Estado", "Inf. Estructura", "Cont. Uso"]
+    header_format = "{:<20} {:<20} {:<15} {:<15} {:<10} {:<10} {:20} {:10} {:15} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
     symbol_table_popup.insert("end", "-" * 95 + "\n")
     
@@ -316,46 +316,6 @@ def show_compiling_complete(tokens):
         console_output.insert("end","Compilacion completada. \n")
     else:
         console_output.insert("end", f"Compilación completada.\n{tokens}")
-
-# def insert_tokens_in_symbol_table(tokens):
-#     """Inserta Los tokens en la tabla de manera formateada"""
-#     symbol_table.config(state="normal") 
-#     symbol_table.delete("1.0", "end") 
-
-#     #definicion de parametros
-#     column_width = 20  
-#     formatted_tokens = ""
-
-#     for token in tokens:
-#         token_type, token_value = token.split(": ", 1)  # Dividir los tokens por tipo y valor
-#         formatted_tokens += f"{token_type.ljust(column_width)}{token_value}\n"
-
-#     symbol_table.insert("end", formatted_tokens)
-#     symbol_table.config(state="disabled")
-
-# def show_symbol_table():
-#     """Creates a pop-up window for the symbol table"""
-#     global tokens_list
-#     pop_up = Toplevel(root)
-#     pop_up.title("Tabla de Símbolos")
-#     pop_up.geometry("400x400")
-    
-#     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
-#     label.pack()
-    
-#     symbol_table_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
-#     symbol_table_popup.pack(expand=True, fill="both")
-    
-#     # Insert existing content from the original symbol_table
-#     column_width = 20  
-#     formatted_tokens = ""
-
-#     for token in tokens_list:
-#         token_type, token_value = token.split(": ", 1)  # Dividir los tokens por tipo y valor
-#         formatted_tokens += f"{token_type.ljust(column_width)}\t\t{token_value}\n"
-
-#     symbol_table_popup.insert("end", formatted_tokens)
-#     symbol_table_popup.config(state="disabled")
 
 # ------- FRAMES -------
 # FRAMA PARA ICONOS

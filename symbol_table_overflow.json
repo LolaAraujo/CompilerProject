@@ -1,0 +1,66 @@
+{
+  "sdassd": {
+    "Identificador": "sdassd",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  },
+  "asdasd": {
+    "Identificador": "asdasd",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  },
+  ";": {
+    "Identificador": ";",
+    "Categor\u00eda": "Token",
+    "Tipo": "PUNTO Y COMA",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  },
+  "int": {
+    "Identificador": "int",
+    "Categor\u00eda": "Token",
+    "Tipo": "ENTERO",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "2",
+    "Estado": "Declarado"
+  },
+  "=": {
+    "Identificador": "=",
+    "Categor\u00eda": "Token",
+    "Tipo": "ASIGNACION",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "2",
+    "Estado": "Declarado"
+  },
+  "1": {
+    "Identificador": "1",
+    "Categor\u00eda": "Token",
+    "Tipo": "NUMERO",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "2",
+    "Estado": "Declarado"
+  },
+  "asjdheu": {
+    "Identificador": "asjdheu",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  },
+  "ajshyue": {
+    "Identificador": "ajshyue",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  }
+}
