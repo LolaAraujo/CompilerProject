@@ -155,7 +155,7 @@ def show_symbol_table():
     
     pop_up = tk.Toplevel(root)
     pop_up.title("Tabla de Símbolos")
-    pop_up.geometry("670x400")
+    pop_up.geometry("770x400")
     
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
     label.pack()
@@ -164,7 +164,7 @@ def show_symbol_table():
     symbol_table_popup.pack(expand=True, fill="both")
     
     # Headers
-    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección de Memoria" ,"Línea", "Valor","Estado", "Inf. Estructura", "Cont. Uso"]
+    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección de Memoria" ,"Línea", "Valor","Estado", "Info Estructura", "Cont. Uso"]
     header_format = "{:<20} {:<20} {:<15} {:<15} {:<10} {:<10} {:20} {:10} {:15} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
     symbol_table_popup.insert("end", "-" * 95 + "\n")
@@ -181,8 +181,12 @@ def show_symbol_table():
                 "Categoría": "Token",
                 "Tipo": type,
                 "Ámbito": "Global",
+                "Dirección de Memoria": "0x0000",
                 "Línea": line_number,
-                "Estado": "Declarado"
+                "Valor": details,
+                "Estado": "Declarado",
+                "Info Estructura": "N/A",
+                "Cont. Uso": "0"
             }
             
             # Add symbol to symbol table instance
@@ -194,8 +198,12 @@ def show_symbol_table():
                 symbol_details["Categoría"][:20],
                 symbol_details["Tipo"][:15],
                 symbol_details["Ámbito"][:15],
+                symbol_details["Dirección de Memoria"][:10],
                 symbol_details["Línea"][:10],
-                symbol_details["Estado"][:10]
+                symbol_details["Valor"][:20],
+                symbol_details["Estado"][:10],
+                symbol_details["Info Estructura"][:15],
+                symbol_details["Cont. Uso"][:10]
             )
             symbol_table_popup.insert("end", row_format)
     

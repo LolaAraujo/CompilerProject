@@ -62,5 +62,21 @@
     "\u00c1mbito": "Global",
     "L\u00ednea": "1",
     "Estado": "Declarado"
+  },
+  "sfsf": {
+    "Identificador": "sfsf",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
+  },
+  "asfa": {
+    "Identificador": "asfa",
+    "Categor\u00eda": "Token",
+    "Tipo": "IDENTIFICADOR",
+    "\u00c1mbito": "Global",
+    "L\u00ednea": "1",
+    "Estado": "Declarado"
   }
 }
