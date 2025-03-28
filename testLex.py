@@ -155,7 +155,8 @@ def show_symbol_table():
     
     pop_up = tk.Toplevel(root)
     pop_up.title("Tabla de Símbolos")
-    pop_up.geometry("770x400")
+    pop_up.geometry("1050x550")
+    
     
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
     label.pack()
@@ -164,10 +165,10 @@ def show_symbol_table():
     symbol_table_popup.pack(expand=True, fill="both")
     
     # Headers
-    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección de Memoria" ,"Línea", "Valor","Estado", "Info Estructura", "Cont. Uso"]
-    header_format = "{:<20} {:<20} {:<15} {:<15} {:<10} {:<10} {:20} {:10} {:15} {:10}\n".format(*headers)
+    headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección" ,"Línea", "Valor","Estado", "Estructura", "Uso"]
+    header_format = "{:<20} {:<20} {:<15} {:<15} {:<15} {:<10} {:10} {:10} {:15} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
-    symbol_table_popup.insert("end", "-" * 95 + "\n")
+    symbol_table_popup.insert("end", "-" * 148 + "\n")
     
     # Process tokens and populate symbol table
     for token in tokens_list:
@@ -181,29 +182,29 @@ def show_symbol_table():
                 "Categoría": "Token",
                 "Tipo": type,
                 "Ámbito": "Global",
-                "Dirección de Memoria": "0x0000",
+                "Dirección": "0x0000",
                 "Línea": line_number,
                 "Valor": details,
                 "Estado": "Declarado",
-                "Info Estructura": "N/A",
-                "Cont. Uso": "0"
+                "Estructura": "N/A",
+                "Uso": "0"
             }
             
             # Add symbol to symbol table instance
             symbol_table_instance.add_symbol(details, symbol_details)
             
             # Format for display
-            row_format = "{:<20} {:<20} {:<15} {:<15} {:<10} {:<10}\n".format(
+            row_format = "{:<20} {:<20} {:<15} {:<15} {:<15} {:<10} {:10} {:10} {:15} {:10}\n".format(
                 symbol_details["Identificador"][:20],
                 symbol_details["Categoría"][:20],
                 symbol_details["Tipo"][:15],
                 symbol_details["Ámbito"][:15],
-                symbol_details["Dirección de Memoria"][:10],
+                symbol_details["Dirección"][:15],
                 symbol_details["Línea"][:10],
-                symbol_details["Valor"][:20],
+                symbol_details["Valor"][:10],
                 symbol_details["Estado"][:10],
-                symbol_details["Info Estructura"][:15],
-                symbol_details["Cont. Uso"][:10]
+                symbol_details["Estructura"][:15],
+                symbol_details["Uso"][:10]
             )
             symbol_table_popup.insert("end", row_format)
     
@@ -317,7 +318,8 @@ def show_compiling_complete(tokens):
     # symbol_table.delete("1.0","end")
     # symbol_table.config(state="disabled")
     global tokens_list
-    tokens_list = tokens    
+    tokens_list = tokens   
+    print(tokens_list) 
     if not es_error(tokens):
         #print(tokens)
         #insert_tokens_in_symbol_table(tokens)
@@ -337,8 +339,8 @@ frame_principal.pack(fill="both", expand=True)
 frame_izq = tk.Frame(frame_principal, bg="lightgray", width=550, bd=2, relief="sunken")
 frame_izq.pack(side="left", fill="both", expand=True)
 # FRAME DE TABLA DE SÍMBOLOS
-frame_der = tk.Frame(frame_principal, bg="lightgray", width=250, bd=2, relief="sunken")
-frame_der.pack(side="right", fill="y")
+# frame_der = tk.Frame(frame_principal, bg="lightgray", width=250, bd=2, relief="sunken")
+# frame_der.pack(side="right", fill="y")
 # FRAME DE CONSOLA DE ERRORES
 frame_inferior = tk.Frame(root, bg="lightgray", height=70)
 frame_inferior.pack(fill="x")
@@ -399,8 +401,7 @@ try:
     # console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
 
 except Exception as e:
-    print("❌ Error en la gramática:")
-    print(e)
+    print("❌ Error en la gramática:", e)
     # console_output.delete("1.0", "end")
     # console_output.insert("end", f"❌ Error en la gramática: {e}")
     exit()
