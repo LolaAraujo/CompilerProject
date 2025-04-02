@@ -15,6 +15,10 @@ from tkinter import Toplevel
 from tkinter import messagebox
 import os
 import json
+from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
+import graphviz  # Para visualización avanzada
+import tempfile  # Para manejar archivos temporales
+import webbrowser  # Para abrir el visualizador
 
 tokens_list =[]
 
@@ -321,27 +325,136 @@ symbol_table_instance = SymbolTable()
 # }
 
 def show_ats_tree():
-    """Creates a pop-up window for the ATS tree"""
-    global tokens_list
-
-    if not tokens_list:
-        messagebox.showinfo("Información", "No hay tokens para mostrar.")
+    global tokens_list, parser
+    
+    if not tokens_list or es_error(tokens_list):
+        messagebox.showinfo("Información", "No hay tokens válidos para construir el árbol.")
         return
 
-    pop_up = tk.Toplevel(root)
-    pop_up.title("Árbol ATS")
-    pop_up.geometry("1050x550")
+    try:
+        code = input_code.get("1.0", "end-1c")
+        tree = parser.parse(code)
+        
+        pop_up = tk.Toplevel(root)
+        pop_up.title("Árbol de Análisis Sintáctico (AST)")
+        pop_up.geometry("800x600")
+        
+        text_widget = tk.Text(pop_up, font=("Consolas", 10), wrap="none")
+        scroll_y = tk.Scrollbar(pop_up, orient="vertical", command=text_widget.yview)
+        scroll_x = tk.Scrollbar(pop_up, orient="horizontal", command=text_widget.xview)
+        
+        text_widget.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        
+        scroll_y.pack(side="right", fill="y")
+        scroll_x.pack(side="bottom", fill="x")
+        text_widget.pack(expand=True, fill="both")
+        
+        # Función para mostrar el árbol con indentación
+        def print_tree(node, level=0):
+            if hasattr(node, 'data'):
+                text_widget.insert("end", "  " * level + str(node.data) + "\n")
+            else:
+                text_widget.insert("end", "  " * level + str(node) + "\n")
+                
+            if hasattr(node, 'children'):
+                for child in node.children:
+                    print_tree(child, level + 1)
+        
+        print_tree(tree)
+        text_widget.config(state="disabled")
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
+#     """Creates a pop-up window showing the Abstract Syntax Tree (AST)"""
+#     global tokens_list, parser
+    
+#     if not tokens_list or es_error(tokens_list):
+#         messagebox.showinfo("Información", "No hay tokens válidos para construir el árbol.")
+#         return
 
-    label = tk.Label(pop_up, text="Árbol ATS", font=("Arial", 11))
-    label.pack()
+#     try:
+#         # Obtener el código fuente
+#         code = input_code.get("1.0", "end-1c")
+        
+#         # Parsear el código para obtener el AST
+#         tree = parser.parse(code)
+        
+#         # Crear ventana emergente
+#         pop_up = tk.Toplevel(root)
+#         pop_up.title("Árbol de Análisis Sintáctico (AST)")
+#         pop_up.geometry("1200x800")
+        
+#         # Usar graphviz para una mejor visualización
+#         dot = graphviz.Digraph(comment='AST')
+        
+#         # Función recursiva para agregar nodos al gráfico
+#         def add_nodes(parent_name, node):
+#             if isinstance(node, list):
+#                 for child in node:
+#                     add_nodes(parent_name, child)
+#             else:
+#                 # Crear un nombre único para el nodo
+#                 node_name = f"{id(node)}_{str(node)}"
+#                 dot.node(node_name, str(node))
+#                 if parent_name:
+#                     dot.edge(parent_name, node_name)
+                
+#                 # Procesar hijos si los tiene
+#                 if hasattr(node, 'children'):
+#                     for child in node.children:
+#                         add_nodes(node_name, child)
+        
+#         # Construir el árbol
+#         add_nodes(None, tree)
+        
+#         # Guardar temporalmente y mostrar
+#         with tempfile.NamedTemporaryFile(delete=False, suffix='.gv') as tmp:
+#             dot.render(tmp.name, format='png', view=False)
+#             img_path = tmp.name + '.png'
+            
+#             # Mostrar la imagen en la interfaz
+#             img = Image.open(img_path)
+#             img = img.resize((1100, 700), Image.LANCZOS)
+#             photo = ImageTk.PhotoImage(img)
+            
+#             label = tk.Label(pop_up, image=photo)
+#             label.image = photo  # Mantener referencia
+#             label.pack()
+            
+#             # Botón para abrir en visor externo
+#             def open_external():
+#                 webbrowser.open(img_path)
+                
+#             btn_open = tk.Button(pop_up, text="Abrir en visor externo", 
+#                                 command=open_external)
+#             btn_open.pack()
+            
+#     except UnexpectedInput as e:
+#         messagebox.showerror("Error de sintaxis", 
+#                            f"Error en línea {e.line}: {e.get_context(code)}")
+#     except Exception as e:
+#         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
+    # """Creates a pop-up window for the ATS tree"""
+    # global tokens_list
 
-    ats_tree_text = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
-    ats_tree_text.pack(expand=True, fill="both")
+    # if not tokens_list:
+    #     messagebox.showinfo("Información", "No hay tokens para mostrar.")
+    #     return
 
-    # Display the ATS tree (for now, just showing the tokens)
-    ats_tree_text.insert("end", "\n".join(tokens_list))
+    # pop_up = tk.Toplevel(root)
+    # pop_up.title("Árbol ATS")
+    # pop_up.geometry("1050x550")
 
-    ats_tree_text.config(state="disabled")
+    # label = tk.Label(pop_up, text="Árbol ATS", font=("Arial", 11))
+    # label.pack()
+
+    # ats_tree_text = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    # ats_tree_text.pack(expand=True, fill="both")
+
+    # # Display the ATS tree (for now, just showing the tokens)
+    # ats_tree_text.insert("end", "\n".join(tokens_list))
+
+    # ats_tree_text.config(state="disabled")
 
 
 TOKENS_GRAMATICA = {
