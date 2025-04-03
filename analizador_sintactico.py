@@ -20,6 +20,11 @@ import graphviz  # Para visualización avanzada
 import tempfile  # Para manejar archivos temporales
 import webbrowser  # Para abrir el visualizador
 
+# Ejemplo de código para analizar
+# func suma(int a, int b) -> int {
+#     return a + b;
+# }
+
 tokens_list =[]
 
 class SymbolTable:
@@ -317,144 +322,168 @@ def show_symbol_table():
 
 symbol_table_instance = SymbolTable()
 
-# var a;
-# void main(){
-# 	a=1;
-# 	b=a+4;
-# 	print(b);
-# }
-
 def show_ats_tree():
-    global tokens_list, parser
+    global parser
     
-    if not tokens_list or es_error(tokens_list):
-        messagebox.showinfo("Información", "No hay tokens válidos para construir el árbol.")
+    if parser is None:
+        messagebox.showerror("Error", "El parser no ha sido inicializado correctamente")
+        return
+
+    code = input_code.get("1.0", "end-1c").strip()
+    if not code:
+        messagebox.showinfo("Información", "No hay código para analizar.")
         return
 
     try:
-        code = input_code.get("1.0", "end-1c")
+        # Parsear el código para obtener el AST
         tree = parser.parse(code)
         
-        pop_up = tk.Toplevel(root)
-        pop_up.title("Árbol de Análisis Sintáctico (AST)")
-        pop_up.geometry("800x600")
+        # Crear ventana emergente
+        tree_window = tk.Toplevel(root)
+        tree_window.title("Árbol de Análisis Sintáctico Jerárquico")
+        tree_window.geometry("1000x700")
         
-        text_widget = tk.Text(pop_up, font=("Consolas", 10), wrap="none")
-        scroll_y = tk.Scrollbar(pop_up, orient="vertical", command=text_widget.yview)
-        scroll_x = tk.Scrollbar(pop_up, orient="horizontal", command=text_widget.xview)
+        # Frame principal con scrollbars
+        main_frame = tk.Frame(tree_window)
+        main_frame.pack(expand=True, fill="both")
         
-        text_widget.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        # Canvas para dibujar el árbol
+        canvas = tk.Canvas(main_frame, bg="white")
+        scroll_y = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scroll_x = tk.Scrollbar(main_frame, orient="horizontal", command=canvas.xview)
+        canvas.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         
         scroll_y.pack(side="right", fill="y")
         scroll_x.pack(side="bottom", fill="x")
-        text_widget.pack(expand=True, fill="both")
+        canvas.pack(expand=True, fill="both")
         
-        # Función para mostrar el árbol con indentación
-        def print_tree(node, level=0):
-            if hasattr(node, 'data'):
-                text_widget.insert("end", "  " * level + str(node.data) + "\n")
-            else:
-                text_widget.insert("end", "  " * level + str(node) + "\n")
-                
+        # Frame interno para los nodos del árbol
+        tree_frame = tk.Frame(canvas, bg="white")
+        canvas.create_window((0, 0), window=tree_frame, anchor="nw")
+        
+        # Variables para el diseño del árbol
+        node_width = 120
+        node_height = 40
+        h_spacing = 50
+        v_spacing = 80
+        
+        # Función para dibujar un nodo
+        def draw_node(parent_frame, text, x, y, width, height, is_root=False):
+            color = "#4CAF50" if is_root else "#2196F3"
+            node = tk.Frame(parent_frame, bg=color, bd=2, relief="raised")
+            node.place(x=x, y=y, width=width, height=height)
+            
+            label = tk.Label(node, text=text, bg=color, fg="white", 
+                           font=("Arial", 9, "bold"), wraplength=width-10)
+            label.place(relx=0.5, rely=0.5, anchor="center")
+            return node
+        
+        # Función recursiva para dibujar el árbol
+        def draw_tree(parent_frame, node, x, y, level=0, parent_coords=None):
+            node_text = node.data if hasattr(node, 'data') else str(node)
+            current_node = draw_node(
+                parent_frame, 
+                node_text, 
+                x, y, 
+                node_width, 
+                node_height,
+                is_root=(level == 0)
+            )
+            
+            current_coords = (x + node_width/2, y + node_height)
+            
+            # Dibujar línea al padre si no es la raíz
+            if parent_coords:
+                canvas.create_line(
+                    parent_coords[0], parent_coords[1],
+                    current_coords[0], y,
+                    fill="#757575", width=2
+                )
+            
+            # Procesar hijos
             if hasattr(node, 'children'):
-                for child in node.children:
-                    print_tree(child, level + 1)
+                num_children = len(node.children)
+                total_width = num_children * node_width + (num_children - 1) * h_spacing
+                start_x = x + node_width/2 - total_width/2
+                
+                for i, child in enumerate(node.children):
+                    child_x = start_x + i * (node_width + h_spacing)
+                    child_y = y + v_spacing
+                    draw_tree(
+                        parent_frame, 
+                        child, 
+                        child_x, 
+                        child_y, 
+                        level + 1, 
+                        current_coords
+                    )
         
-        print_tree(tree)
-        text_widget.config(state="disabled")
+        # Calcular tamaño necesario
+        def calculate_tree_size(node):
+            if not hasattr(node, 'children') or not node.children:
+                return (1, 1)
+            
+            width = 0
+            max_depth = 0
+            for child in node.children:
+                child_width, child_depth = calculate_tree_size(child)
+                width += child_width
+                max_depth = max(max_depth, child_depth)
+            
+            return (max(width, len(node.children)), max_depth + 1)
         
+        tree_width, tree_depth = calculate_tree_size(tree)
+        required_width = tree_width * (node_width + h_spacing)
+        required_height = tree_depth * (node_height + v_spacing)
+        
+        # Configurar el canvas
+        tree_frame.config(width=max(required_width, 1000), 
+                         height=max(required_height, 700))
+        canvas.config(scrollregion=(0, 0, required_width, required_height))
+        
+        # Dibujar el árbol desde la raíz
+        start_x = (required_width - node_width) / 2
+        draw_tree(tree_frame, tree, start_x, 20)
+        
+        # Configurar el scrolling
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
+        # Botón para exportar   | ARREGLAR
+        def export_to_image():
+            try:
+                from PIL import ImageGrab
+                import tempfile
+                
+                # Obtener coordenadas del canvas
+                x = tree_window.winfo_rootx() + canvas.winfo_x()
+                y = tree_window.winfo_rooty() + canvas.winfo_y()
+                x1 = x + canvas.winfo_width()
+                y1 = y + canvas.winfo_height()
+                
+                # Capturar y guardar
+                img = ImageGrab.grab((x, y, x1, y1))
+                temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+                img.save(temp_file.name)
+                messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
+        
+        export_btn = tk.Button(tree_window, text="Exportar como imagen", 
+                             command=export_to_image)
+        export_btn.pack(pady=5)
+        
+    except UnexpectedInput as e:
+        expected = ", ".join(e.expected) if e.expected else "nada"
+        error_msg = f"Error de sintaxis en línea {e.line}:\n"
+        error_msg += f"Token inesperado: '{e.token.value}' ({e.token.type})\n"
+        error_msg += "Contexto:\n" + e.get_context(code)
+        error_msg += f"\nEsperado: {expected}"
+        messagebox.showerror("Error de Sintaxis", error_msg)
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
-#     """Creates a pop-up window showing the Abstract Syntax Tree (AST)"""
-#     global tokens_list, parser
-    
-#     if not tokens_list or es_error(tokens_list):
-#         messagebox.showinfo("Información", "No hay tokens válidos para construir el árbol.")
-#         return
-
-#     try:
-#         # Obtener el código fuente
-#         code = input_code.get("1.0", "end-1c")
-        
-#         # Parsear el código para obtener el AST
-#         tree = parser.parse(code)
-        
-#         # Crear ventana emergente
-#         pop_up = tk.Toplevel(root)
-#         pop_up.title("Árbol de Análisis Sintáctico (AST)")
-#         pop_up.geometry("1200x800")
-        
-#         # Usar graphviz para una mejor visualización
-#         dot = graphviz.Digraph(comment='AST')
-        
-#         # Función recursiva para agregar nodos al gráfico
-#         def add_nodes(parent_name, node):
-#             if isinstance(node, list):
-#                 for child in node:
-#                     add_nodes(parent_name, child)
-#             else:
-#                 # Crear un nombre único para el nodo
-#                 node_name = f"{id(node)}_{str(node)}"
-#                 dot.node(node_name, str(node))
-#                 if parent_name:
-#                     dot.edge(parent_name, node_name)
-                
-#                 # Procesar hijos si los tiene
-#                 if hasattr(node, 'children'):
-#                     for child in node.children:
-#                         add_nodes(node_name, child)
-        
-#         # Construir el árbol
-#         add_nodes(None, tree)
-        
-#         # Guardar temporalmente y mostrar
-#         with tempfile.NamedTemporaryFile(delete=False, suffix='.gv') as tmp:
-#             dot.render(tmp.name, format='png', view=False)
-#             img_path = tmp.name + '.png'
-            
-#             # Mostrar la imagen en la interfaz
-#             img = Image.open(img_path)
-#             img = img.resize((1100, 700), Image.LANCZOS)
-#             photo = ImageTk.PhotoImage(img)
-            
-#             label = tk.Label(pop_up, image=photo)
-#             label.image = photo  # Mantener referencia
-#             label.pack()
-            
-#             # Botón para abrir en visor externo
-#             def open_external():
-#                 webbrowser.open(img_path)
-                
-#             btn_open = tk.Button(pop_up, text="Abrir en visor externo", 
-#                                 command=open_external)
-#             btn_open.pack()
-            
-#     except UnexpectedInput as e:
-#         messagebox.showerror("Error de sintaxis", 
-#                            f"Error en línea {e.line}: {e.get_context(code)}")
-#     except Exception as e:
-#         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
-    # """Creates a pop-up window for the ATS tree"""
-    # global tokens_list
-
-    # if not tokens_list:
-    #     messagebox.showinfo("Información", "No hay tokens para mostrar.")
-    #     return
-
-    # pop_up = tk.Toplevel(root)
-    # pop_up.title("Árbol ATS")
-    # pop_up.geometry("1050x550")
-
-    # label = tk.Label(pop_up, text="Árbol ATS", font=("Arial", 11))
-    # label.pack()
-
-    # ats_tree_text = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
-    # ats_tree_text.pack(expand=True, fill="both")
-
-    # # Display the ATS tree (for now, just showing the tokens)
-    # ats_tree_text.insert("end", "\n".join(tokens_list))
-
-    # ats_tree_text.config(state="disabled")
 
 
 TOKENS_GRAMATICA = {
@@ -465,28 +494,27 @@ TOKENS_GRAMATICA = {
     "STRING": "CADENA",
     "ARRAY": "ARREGLO",
     "STRUCT": "PALABRA RESERVADA",
+    "ENUM": "PALABRA RESERVADA",
     "VOID": "PALABRA RESERVADA",
-    "MAIN": "PALABRA RESERVADA",
-    "FUNC": "DECLARACION FUNCION",
-    "READ": "FUNCION",
+    "READ": "PALABRA RESERVADA",
     "PRINT": "PALABRA RESERVADA",
-    "IF": "CONTROL",
-    "ELSE": "CONTROL",
-    "SWITCH": "CONTROL",
-    "CASE": "CONTROL",
-    "DEFAULT": "CONTROL",
-    "FOR": "CONTROL",
-    "WHILE": "CONTROL",
-    "DO": "CONTROL",
-    "BREAK": "CONTROL",
-    "CONTINUE": "CONTROL",
-    "RETURN": "CONTROL",
-    "TRY": "CONTROL",
-    "CATCH": "CONTROL",
-    "CONST": "MODIFICADOR",
-    "IMPORT": "PAQUETE",
-    "EXPORT": "PAQUETE",
-    "ENUM": "AGRUPDOR",
+    "IF": "PALABRA RESERVADA",
+    "ELSE": "PALABRA RESERVADA",
+    "SWITCH": "PALABRA RESERVADA",
+    "CASE": "PALABRA RESERVADA",
+    "DEFAULT": "PALABRA RESERVADA",
+    "BREAK": "PALABRA RESERVADA",
+    "FOR": "PALABRA RESERVADA",
+    "WHILE": "PALABRA RESERVADA",
+    "DO": "PALABRA RESERVADA",
+    "CONTINUE": "PALABRA RESERVADA",
+    "RETURN": "PALABRA RESERVADA",
+    "FUNC": "PALABRA RESERVADA",
+    "TRY": "PALABRA RESERVADA",
+    "CATCH": "PALABRA RESERVADA",
+    "IMPORT": "PALABRA RESERVADA",
+    "EXPORT": "PALABRA RESERVADA",
+    "CONST": "PALABRA RESERVADA",
     "IDENTIFICADOR": "IDENTIFICADOR",
     "NUMBER": "NUMERO",
     "FLOAT_NUMBER": "NUMERO FLOTANTE",
@@ -520,10 +548,7 @@ TOKENS_GRAMATICA = {
     "__ANON_1": "NUMERO",
     "__ANON_2": "NUMERO",
     "__ANON_6": "NUMERO",
-    }
-# valid_token_names = set(TOKENS_GRAMATICA.values())
-# escaped_token_names = "|".join(map(re.escape, valid_token_names))
-# regEx = re.compile(rf"^(?:{escaped_token_names}|__ANON_\d+): .+$")
+}
 
 # ----- CONFIGURACIÓN DE LA INTERFAZ -----
 root = tk.Tk()
@@ -543,17 +568,11 @@ def compile_code():
     if input_code.get("1.0", "end-1c") == "":
         console_output.delete("1.0", "end")
         console_output.insert("end", "No hay código para compilar.\n")
-        # symbol_table.config(state="normal")
-        # symbol_table.insert("end", "No hay símbolos.\n")
-        # symbol_table.config(state="disabled")
         return
 
     console_output.delete("1.0", "end")
     symbol_table_instance.clear()
     tokens_list.clear()
-    # symbol_table.config(state="normal")
-    # symbol_table.delete("1.0","end")
-    # symbol_table.config(state="disabled")
     console_output.insert("end", "Compilando...\n")
 
     tokens  = obtener_lista_tokens(input_code.get("1.0", "end-1c"))
@@ -562,14 +581,9 @@ def compile_code():
 
 def show_compiling_complete(tokens):
     console_output.delete("1.0", "end")
-    # symbol_table.config(state="normal")
-    # symbol_table.delete("1.0","end")
-    # symbol_table.config(state="disabled")
     global tokens_list
     tokens_list = tokens
     if not es_error(tokens):
-        #print(tokens)
-        #insert_tokens_in_symbol_table(tokens)
         console_output.insert("end","Compilacion completada. \n")
     else:
         console_output.insert("end", f"Compilación completada.\n{tokens}")
@@ -585,9 +599,7 @@ frame_principal.pack(fill="both", expand=True)
 # FRAME DE CÓDIGO
 frame_izq = tk.Frame(frame_principal, bg="lightgray", width=550, bd=2, relief="sunken")
 frame_izq.pack(side="left", fill="both", expand=True)
-# FRAME DE TABLA DE SÍMBOLOS
-# frame_der = tk.Frame(frame_principal, bg="lightgray", width=250, bd=2, relief="sunken")
-# frame_der.pack(side="right", fill="y")
+
 # FRAME DE CONSOLA DE ERRORES
 frame_inferior = tk.Frame(root, bg="lightgray", height=70)
 frame_inferior.pack(fill="x")
@@ -620,14 +632,6 @@ line_numbers_scrollbar.pack(side="right", fill="y")
 line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 
 
-# Tabla de Simbolos | frame der
-
-# label = tk.Label(frame_der, text="Tabla de Símbolos", bg="lightgray", fg="black", font=("Arial", 11))
-# label.place(x=5, y=5)
-# symbol_table = tk.Text(frame_der, bg='lightgray', fg='black', font=("Consolas", 10), state="disabled")
-# symbol_table.place(x=1, y=29, width=220, height=564)
-
-
 # Consola de errores | frame inferior
 console_output = tk.Text(frame_inferior, bg='black', fg='white', font=("Consolas", 10), height=10)
 console_output.pack(side="left", fill="both", expand=True)
@@ -654,9 +658,6 @@ except Exception as e:
     # console_output.delete("1.0", "end")
     # console_output.insert("end", f"❌ Error en la gramática: {e}")
     exit()
-
-# def is_tokens_list(res):
-#     return isinstance(res, list) and all(regEx.match(token) for token in res)
 
 def es_error(resultado):
     return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
