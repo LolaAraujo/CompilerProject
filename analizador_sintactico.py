@@ -10,19 +10,13 @@ from tkinter import *
 from PIL import Image, ImageTk
 from lark import Lark
 from lark.exceptions import UnexpectedInput
-import re
-from tkinter import Toplevel
 from tkinter import messagebox
-import os
 import json
 from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
-import graphviz  # Para visualización avanzada
-import tempfile  # Para manejar archivos temporales
-import webbrowser  # Para abrir el visualizador
 
 # Ejemplo de código para analizar
 # func suma(int a, int b) -> int {
-#     return a + b;
+#     return a + b;
 # }
 
 tokens_list =[]
@@ -163,12 +157,10 @@ class SymbolTable:
         # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
-            if identifier in ["void", "read"]:
+            if identifier in ["void", "read", "func"]:
                 return "función"
             elif identifier in ["print"]:
                 return "función de salida"
-            elif identifier in ["main"]:
-                return "nombre función"
             
             # Inferencia por convenciones de nombre
             lower_id = identifier.lower()
@@ -180,6 +172,8 @@ class SymbolTable:
                 return "real"
             elif lower_id.endswith(('name', 'text', 'msg', 'title')):
                 return "cadena"
+            elif lower_id.endswith(('arr', 'list', 'set')):
+                return "arreglo"
         
         return "variable"  # Valor por defecto
     
@@ -247,7 +241,7 @@ def show_symbol_table():
                 if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
                     
                     # Determinar categoría basada en el token
-                    if identifier in ["main", "print", "void", "read"]:
+                    if identifier in ["main", "print", "void", "read", "func"]:
                         category = "FUNCIÓN"
                     else:
                         category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
@@ -265,8 +259,9 @@ def show_symbol_table():
                         "Ámbito": "Global" if identifier == "global" else "Local",
                         "Dirección": f"0x{abs(hash(identifier)):08X}",
                         "Línea": line_number,
-                        "Valor": symbol_table_instance.get_value(identifier),
-                        "Estado": "Declarado" if is_declaration else "Usado",
+                        "Valor": symbol_table_instance.get_value(identifier),   #####
+                        "Estado": "Declarado" if is_declaration else "Usado",   ####
+                        "Estructura": "Arreglo" if token_type == "ARREGLO" else "N/A",
                         "Uso": usage_count.get(identifier, 1)
                     }
                 
@@ -321,6 +316,7 @@ def show_symbol_table():
     symbol_table_popup.config(state="disabled")
 
 symbol_table_instance = SymbolTable()
+
 
 def show_ats_tree():
     global parser
@@ -452,28 +448,28 @@ def show_ats_tree():
         canvas.bind_all("<MouseWheel>", on_mousewheel)
         
         # Botón para exportar   | ARREGLAR
-        def export_to_image():
-            try:
-                from PIL import ImageGrab
-                import tempfile
+        # def export_to_image():
+        #     try:
+        #         from PIL import ImageGrab
+        #         import tempfile
                 
-                # Obtener coordenadas del canvas
-                x = tree_window.winfo_rootx() + canvas.winfo_x()
-                y = tree_window.winfo_rooty() + canvas.winfo_y()
-                x1 = x + canvas.winfo_width()
-                y1 = y + canvas.winfo_height()
+        #         # Obtener coordenadas del canvas
+        #         x = tree_window.winfo_rootx() + canvas.winfo_x()
+        #         y = tree_window.winfo_rooty() + canvas.winfo_y()
+        #         x1 = x + canvas.winfo_width()
+        #         y1 = y + canvas.winfo_height()
                 
-                # Capturar y guardar
-                img = ImageGrab.grab((x, y, x1, y1))
-                temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-                img.save(temp_file.name)
-                messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
-            except Exception as e:
-                messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
+        #         # Capturar y guardar
+        #         img = ImageGrab.grab((x, y, x1, y1))
+        #         temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        #         img.save(temp_file.name)
+        #         messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
+        #     except Exception as e:
+        #         messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
         
-        export_btn = tk.Button(tree_window, text="Exportar como imagen", 
-                             command=export_to_image)
-        export_btn.pack(pady=5)
+        # export_btn = tk.Button(tree_window, text="Exportar como imagen", 
+        #                      command=export_to_image)
+        # export_btn.pack(pady=5)
         
     except UnexpectedInput as e:
         expected = ", ".join(e.expected) if e.expected else "nada"
@@ -650,13 +646,9 @@ with open("Gramatica.ebnf", "r") as file:
 try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
-    # console_output.delete("1.0", "end")
-    # console_output.insert("end", "✅ La gramática es válida y compatible con Lark")
 
 except Exception as e:
     print("❌ Error en la gramática:", e)
-    # console_output.delete("1.0", "end")
-    # console_output.insert("end", f"❌ Error en la gramática: {e}")
     exit()
 
 def es_error(resultado):
@@ -676,7 +668,7 @@ def obtener_lista_tokens(codigo):
         # print(resultado)
         return resultado
     except UnexpectedInput as e:
-        error_msg = f"Error en la línea {e.line}, columna {e.column}: \n{e.get_context(codigo)}"
+        error_msg = f"Error en la línea {e.line}: \n{e.get_context(codigo)}"
         return [error_msg]
     except Exception as e:
         return [f"Error en el análisis léxico: {str(e)}"]
