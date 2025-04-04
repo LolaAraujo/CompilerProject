@@ -1,0 +1,38 @@
+{
+  "suma": {
+    "Identificador": "suma",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x6FBE8334CA3AC058",
+    "L\u00ednea": "2",
+    "Valor": "No inicializado",
+    "Estado": "Usado",
+    "Estructura": "N/A",
+    "Uso": 1
+  },
+  "a": {
+    "Identificador": "a",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x276B2487F2BEC62B",
+    "L\u00ednea": "14",
+    "Valor": "No inicializado",
+    "Estado": "Usado",
+    "Estructura": "N/A",
+    "Uso": 2
+  },
+  "b": {
+    "Identificador": "b",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x6AAE244F9E28189D",
+    "L\u00ednea": "16",
+    "Valor": "No inicializado",
+    "Estado": "Usado",
+    "Estructura": "N/A",
+    "Uso": 2
+  }
+}

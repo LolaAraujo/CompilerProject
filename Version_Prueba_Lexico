@@ -615,23 +615,34 @@ def compile_code():
     root.update()  # Actualizar la interfaz para mostrar el mensaje
 
     try:
-        # Análisis léxico
-        tokens = obtener_lista_tokens(code)
-        if es_error(tokens):
-            mostrar_error_lexico(tokens[0], code)
-            return
-
+        # Análisis léxico (capturar tokens para tabla de símbolos)
+        tokens_lexicos = list(parser.lex(code))  # <-- Esto obtiene los tokens para la tabla
+        tokens_list = [
+            f"{i+1}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
+            for i, t in enumerate(tokens_lexicos)
+        ]
+        
         # Análisis sintáctico
         tree = parser.parse(code)
         console_output.insert("end", "✅ Análisis completado sin errores\n")
         
         # Mostrar advertencias si hay tokens sospechosos
-        mostrar_advertencias(tokens)
+        mostrar_advertencias(tokens_list)
         
     except UnexpectedInput as e:
+        # Si hay error, igual guardamos los tokens capturados hasta el error
+        tokens_lexicos = list(parser.lex(code))
+        tokens_list = [
+            f"{i+1}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
+            for i, t in enumerate(tokens_lexicos)
+        ]
         mostrar_error_sintactico(e, code)
     except Exception as e:
         mostrar_error_general(e)
+    finally:
+        # Mostrar tabla de símbolos si hay tokens capturados
+        if tokens_list:
+            show_symbol_table()
 
 def mostrar_error_lexico(error_msg, code):
     """Muestra errores léxicos con formato específico"""
