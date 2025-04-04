@@ -742,7 +742,6 @@ frame_izq.pack(side="left", fill="both", expand=True)
 # FRAME DE CONSOLA DE ERRORES
 frame_inferior = tk.Frame(root, bg="lightgray", height=70)
 frame_inferior.pack(fill="x")
-input_code.tag_configure("error_line", background="#FFCCCC")
 
 
 # ----- OBJETOS EN FRAMES -----
