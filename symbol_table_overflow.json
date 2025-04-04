@@ -4,10 +4,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x2E4B61A31FEE331C",
+    "Direcci\u00f3n": "0x671D5610BC37FEEB",
     "L\u00ednea": "2",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 1
   },
@@ -16,10 +16,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x7C9A72563F7B8B1A",
-    "L\u00ednea": "14",
+    "Direcci\u00f3n": "0x6EC973625EE258A9",
+    "L\u00ednea": "19",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 2
   },
@@ -28,11 +28,23 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x1636A6B02C388D34",
-    "L\u00ednea": "16",
+    "Direcci\u00f3n": "0x7A02A2B4B6A14542",
+    "L\u00ednea": "21",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 2
+  },
+  "c": {
+    "Identificador": "c",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x2778CC30CD2B7443",
+    "L\u00ednea": "14",
+    "Valor": "No inicializado",
+    "Estado": "Usado (sin declarar)",
+    "Estructura": "N/A",
+    "Uso": 1
   }
 }
