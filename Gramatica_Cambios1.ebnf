@@ -1,0 +1,127 @@
+// Agregar al inicio de la gramática
+%import common.ESCAPED_STRING
+%import common.INT
+%import common.FLOAT
+%import common.WS
+%ignore WS
+
+// Regla para capturar errores léxicos
+ERROR: /./
+
+start: statement+
+
+statement : declaracion ";"
+          | constante ";"
+          | entrada ";"
+          | salida ";"
+          | expression ";"
+          | condicional
+          | switch
+          | asignacion ";" 
+          | loop
+          | control_flujo ";"
+          | funcion
+          | try_catch
+          | module ";"
+          | exportacion ";"
+          | error ";?"  // Manejo de errores en statements
+
+// Manejo de errores específicos
+error: ";" {raise Exception("Sentencia vacía")}
+     | UNEXPECTED_TOKEN {raise Exception(f"Token inesperado: {UNEXPECTED_TOKEN.value}")}
+
+tipo_dato : "int" | "float" | "bool" | "char" | "string"
+            | "array" "<" tipo_dato ">"
+            | "struct"
+            | "enum"
+            | "void"
+            | error {raise Exception("Tipo de dato no válido")}
+
+entrada : "read" "(" (identificador | error) ")" {if isinstance($3, error): raise Exception("Identificador inválido en read()")}
+
+salida : "print" "(" (expression | error) ")" {if isinstance($3, error): raise Exception("Expresión inválida en print()")}
+
+identificador : IDENTIFICADOR
+
+operador_aritmetico : PLUS | MINUS | STAR | SLASH | PERCENT
+operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTEQUAL
+operador_logico : AND | OR | NOT
+operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
+
+expression : expression_aritmetica | expression_booleana | error {if isinstance($1, error): raise Exception("Expresión inválida")}
+
+expression_aritmetica : term (( PLUS | MINUS ) term)*
+expression_booleana : comparacion (operador_logico comparacion)* | "(" expression_booleana ")"
+comparacion : expression_aritmetica operador_relacional expression_aritmetica | "(" comparacion ")"
+
+term : factor (( STAR | SLASH | PERCENT ) factor)*
+factor : INT | FLOAT | identificador | STRING | "(" expression ")" | error {if isinstance($1, error): raise Exception("Factor inválido")}
+
+condicional : "if" "(" (expression_booleana | error) ")" bloque ("else" bloque)? {if isinstance($3, error): raise Exception("Condición if inválida")}
+
+bloque : "{" (statement)* "}" | error {if isinstance($1, error): raise Exception("Bloque inválido")}
+
+comentario: COMENTARIO_SIMPLE | COMENTARIO_MULTILINEA
+
+switch : "switch" "(" (expression | error) ")" "{" casos "}" {if isinstance($3, error): raise Exception("Expresión switch inválida")}
+casos : (case)+ ("default" ":" bloque)?
+case : "case" (expression | error) ":" bloque {if isinstance($2, error): raise Exception("Expresión case inválida")}
+
+loop : "for" "(" (asignacion | declaracion | error) ";" (expression_booleana | error) ";" (asignacion | error) ")" bloque
+        {if any(isinstance(x, error) for x in [$3, $5, $7]): raise Exception("Expresión for inválida")}
+      | "while" "(" (expression_booleana | error) ")" bloque
+        {if isinstance($3, error): raise Exception("Condición while inválida")}
+      | "do" (bloque | error) "while" "(" (expression_booleana | error) ")" ";"
+        {if isinstance($2, error) or isinstance($5, error): raise Exception("Expresión do-while inválida")}
+
+declaracion : tipo_dato (identificador | error) (ASSIGN (expression | error))? 
+              {if isinstance($2, error): raise Exception("Identificador inválido en declaración")}
+
+asignacion : (identificador | error) operador_asignacion (expression | error)
+             {if isinstance($1, error) or isinstance($3, error): raise Exception("Asignación inválida")}
+
+constante : "const" (tipo_dato)? (identificador | error) "=" (expression | error)
+            {if isinstance($3, error) or isinstance($5, error): raise Exception("Constante inválida")}
+
+control_flujo : "break" | "continue" | "return" (expression)?
+
+funcion : "func" (identificador | error) "(" (parametros)? ")" "->" (tipo_dato | error) (bloque | error)
+           {if any(isinstance(x, error) for x in [$2, $6, $7]): raise Exception("Declaración de función inválida")}
+parametros : tipo_dato (identificador | error) ("," tipo_dato (identificador | error))*
+             {if any(isinstance(x, error) for x in [$2] + [$4::2]): raise Exception("Parámetros inválidos")}
+
+try_catch : "try" (bloque | error) "catch" "(" (identificador | error) ")" (bloque | error)
+            {if any(isinstance(x, error) for x in [$2, $5, $7]): raise Exception("Try-catch inválido")}
+
+module : "import" (identificador | error) {if isinstance($2, error): raise Exception("Import inválido")}
+exportacion : "export" (identificador | error) {if isinstance($2, error): raise Exception("Export inválido")}
+
+// Tokens
+IDENTIFICADOR: /[a-zA-Z_][a-zA-Z0-9_]*/
+STRING: ESCAPED_STRING
+
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+PERCENT: "%"
+
+LESSTHAN: "<"
+MORETHAN: ">"
+LESSEQUAL: "<="
+MOREEQUAL: ">="
+EQUAL: "=="
+NOTEQUAL: "!="
+
+AND: "AND"
+OR: "OR"
+NOT: "NOT"
+
+ASSIGN: "="
+PLUSASSIGN: "+="
+MINUSASSIGN: "-="
+STARASSIGN: "*="
+SLASHASSIGN: "/="
+
+COMENTARIO_SIMPLE: /\/\/.*/
+COMENTARIO_MULTILINEA: /\/\*[\s\S]*?\*\//

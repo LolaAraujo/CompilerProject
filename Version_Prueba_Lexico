@@ -24,6 +24,41 @@ from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
 
 tokens_list =[]
 
+# Agregar al inicio del archivo, después de los imports
+class ErrorManager:
+    def __init__(self):
+        self.error_count = 0
+        self.errors = []
+    
+    def add_error(self, line, subject, error_type, solution):
+        self.error_count += 1
+        error_info = {
+            "number": self.error_count,
+            "line": line,
+            "subject": subject,
+            "type": error_type,
+            "solution": solution
+        }
+        self.errors.append(error_info)
+        return error_info
+    
+    def clear_errors(self):
+        self.error_count = 0
+        self.errors = []
+    
+    def format_error(self, error_info):
+        return (f"ERROR #{error_info['number']}: "
+                f"Línea {error_info['line']} - "
+                f"'{error_info['subject']}' - "
+                f"{error_info['type']}\n"
+                f"Posible solución: {error_info['solution']}\n")
+    
+    def get_all_errors_formatted(self):
+        return "\n".join([self.format_error(e) for e in self.errors])
+
+# Crear una instancia global del manejador de errores
+error_manager = ErrorManager()
+
 class SymbolTable:
     def __init__(self, max_memory_size=100):
         """
@@ -563,28 +598,123 @@ def update_line_numbers(event=None):
     line_numbers.config(state="disabled")
 
 def compile_code():
-    if input_code.get("1.0", "end-1c") == "":
+    global tokens_list, symbol_table_instance
+    
+    code = input_code.get("1.0", "end-1c").strip()
+    if not code:
         console_output.delete("1.0", "end")
         console_output.insert("end", "No hay código para compilar.\n")
         return
 
+    # Limpiar resultados anteriores
     console_output.delete("1.0", "end")
     symbol_table_instance.clear()
     tokens_list.clear()
-    console_output.insert("end", "Compilando...\n")
+    
+    console_output.insert("end", "🔍 Analizando código...\n")
+    root.update()  # Actualizar la interfaz para mostrar el mensaje
 
-    tokens  = obtener_lista_tokens(input_code.get("1.0", "end-1c"))
+    try:
+        # Análisis léxico
+        tokens = obtener_lista_tokens(code)
+        if es_error(tokens):
+            mostrar_error_lexico(tokens[0], code)
+            return
 
-    root.after(2000, show_compiling_complete(tokens))  # Llamar a la función después de 2 segundos
+        # Análisis sintáctico
+        tree = parser.parse(code)
+        console_output.insert("end", "✅ Análisis completado sin errores\n")
+        
+        # Mostrar advertencias si hay tokens sospechosos
+        mostrar_advertencias(tokens)
+        
+    except UnexpectedInput as e:
+        mostrar_error_sintactico(e, code)
+    except Exception as e:
+        mostrar_error_general(e)
 
-def show_compiling_complete(tokens):
+def mostrar_error_lexico(error_msg, code):
+    """Muestra errores léxicos con formato específico"""
+    # Extraer línea del mensaje de error
+    line_match = re.search(r'line (\d+)', error_msg)
+    line = line_match.group(1) if line_match else "desconocida"
+    
+    # Extraer token problemático
+    token_match = re.search(r"Token inesperado: '([^']+)'", error_msg)
+    token = token_match.group(1) if token_match else "desconocido"
+    
+    console_output.insert("end", f"🚨 ERROR LÉXICO (Línea {line}):\n")
+    console_output.insert("end", f"• Sujeto: '{token}'\n")
+    console_output.insert("end", f"• Tipo: Símbolo no reconocido\n")
+    console_output.insert("end", f"• Solución: Verificar que el símbolo sea válido\n")
+    console_output.insert("end", f"\n📝 Contexto:\n{obtener_contexto(code, int(line) if line.isdigit() else 0)}\n")
+
+def mostrar_error_sintactico(e, code):
+    """Muestra errores sintácticos con formato específico"""
+    expected = ", ".join(e.expected) if e.expected else "elemento no especificado"
+    
+    console_output.insert("end", f"🚨 ERROR SINTÁCTICO (Línea {e.line}):\n")
+    console_output.insert("end", f"• Sujeto: '{e.token.value}'\n")
+    console_output.insert("end", f"• Tipo: Token inesperado\n")
+    console_output.insert("end", f"• Solución: Se esperaba {expected}\n")
+    console_output.insert("end", f"\n📝 Contexto:\n{e.get_context(code)}\n")
+
+def mostrar_error_general(e):
+    """Muestra otros tipos de errores"""
+    console_output.insert("end", f"🚨 ERROR INESPERADO:\n")
+    console_output.insert("end", f"• Tipo: {type(e).__name__}\n")
+    console_output.insert("end", f"• Mensaje: {str(e)}\n")
+    console_output.insert("end", f"• Solución: Revisar el código para errores obvios\n")
+
+def mostrar_advertencias(tokens):
+    """Detecta y muestra posibles problemas que no son errores sintácticos"""
+    warnings = []
+    
+    # Buscar identificadores sospechosos
+    for token in tokens:
+        if ": IDENTIFICADOR: " in token:
+            _, _, ident = token.split(": ")
+            if len(ident) > 20:
+                warnings.append(f"Identificador demasiado largo: '{ident}'")
+            if ident.lower() != ident and ident.upper() != ident:
+                warnings.append(f"Identificador con mezcla de mayúsculas/minúsculas: '{ident}'")
+    
+    if warnings:
+        console_output.insert("end", "\n⚠️ ADVERTENCIAS:\n")
+        for warn in warnings:
+            console_output.insert("end", f"• {warn}\n")
+
+def obtener_contexto(codigo, linea):
+    """Obtiene las líneas alrededor del error para contexto"""
+    lineas = codigo.split('\n')
+    inicio = max(0, linea - 2)
+    fin = min(len(lineas), linea + 2)
+    
+    contexto = []
+    for i in range(inicio, fin):
+        prefix = ">>> " if i == linea - 1 else "    "
+        contexto.append(f"{i+1:4}{prefix}{lineas[i]}")
+    
+    return "\n".join(contexto)
+
+# Modificar show_compiling_complete
+def show_compiling_complete(tokens, code):
     console_output.delete("1.0", "end")
     global tokens_list
-    tokens_list = tokens
-    if not es_error(tokens):
-        console_output.insert("end","Compilacion completada. \n")
+    
+    if es_error(tokens):
+        # Mostrar el primer error encontrado
+        console_output.insert("end", tokens[0] + "\n")
     else:
-        console_output.insert("end", f"Compilación completada.\n{tokens}")
+        tokens_list = tokens
+        console_output.insert("end", "Compilación completada.\n")
+        
+        # Mostrar todos los errores encontrados
+        if error_manager.errors:
+            console_output.insert("end", "\n=== Errores encontrados ===\n")
+            console_output.insert("end", error_manager.get_all_errors_formatted())
+        else:
+            console_output.insert("end", "No se encontraron errores.\n")
 
 # ------- FRAMES -------
 # FRAMA PARA ICONOS
@@ -657,24 +787,59 @@ def es_error(resultado):
     return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
 
 # Función para obtener lista de tokens
+# Modificar la función obtener_lista_tokens
 def obtener_lista_tokens(codigo):
     try:
         tokens = list(parser.lex(codigo))
         resultado = []
         sentencia_id = 1
+        
+        # Verificar tokens inválidos
         for i, token in enumerate(tokens):
-            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
-            resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
-            if token.type == "SEMICOLON":  # Detectar fin de sentencia
-                sentencia_id += 1
-        # print(resultado)
+            if token.type == "ERROR":
+                error_info = error_manager.add_error(
+                    line=token.line,
+                    subject=token.value,
+                    error_type="Léxico - Símbolo no reconocido",
+                    solution="Revisar que el símbolo sea válido o esté bien escrito"
+                )
+                resultado.append(f"Error en línea {token.line}: Símbolo no reconocido '{token.value}'")
+            else:
+                tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
+                resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
+                if token.type == "SEMICOLON":
+                    sentencia_id += 1
+        
         return resultado
+        
     except UnexpectedInput as e:
-        error_msg = f"Error en la línea {e.line}: \n{e.get_context(codigo)}"
+        # Manejar errores sintácticos
+        error_line = e.line
+        error_token = e.token.value if hasattr(e, 'token') else "?"
+        expected = ", ".join(e.expected) if e.expected else "elemento no especificado"
+        
+        error_info = error_manager.add_error(
+            line=error_line,
+            subject=error_token,
+            error_type=f"Sintáctico - Token inesperado",
+            solution=f"Se esperaba: {expected}"
+        )
+        
+        error_msg = (
+            f"Error en línea {error_line}: Token inesperado '{error_token}'\n"
+            f"Contexto:\n{e.get_context(codigo)}\n"
+            f"Se esperaba: {expected}"
+        )
         return [error_msg]
+    
     except Exception as e:
+        error_info = error_manager.add_error(
+            line=0,
+            subject="Desconocido",
+            error_type="General - Error inesperado",
+            solution="Revisar el código fuente para errores obvios"
+        )
         return [f"Error en el análisis léxico: {str(e)}"]
-
 
 update_line_numbers()
 
