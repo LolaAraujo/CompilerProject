@@ -8,7 +8,8 @@
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
-from lark import Lark, UnexpectedInput
+from lark import Lark
+from lark.exceptions import UnexpectedInput
 import re
 from tkinter import Toplevel
 from tkinter import messagebox
@@ -16,98 +17,12 @@ import os
 import json
 from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
 
-# Cargar la gramática desde un archivo externo
-with open("Gramatica.ebnf", "r") as file:
-    grammar = file.read()
+# Ejemplo de código para analizar
+# func suma(int a, int b) -> int {
+#     return a + b;
+# }
 
-# Crear el parser léxico con Lark
-try:
-    lexer = Lark(grammar, parser="lalr", start="start")
-except Exception as e:
-    print("❌ Error en la gramática:", e)
-    exit()
-
-# Obtener tokens desde Lark
-def obtener_tokens(codigo):
-    try:
-        tokens = list(lexer.lex(codigo))
-        return [{"type": t.type, "value": t.value, "line": t.line, "column": t.column} for t in tokens]
-    except UnexpectedInput as e:
-        return [{"error": True, "line": e.line, "column": e.column, "context": e.get_context(codigo)}]
-    except Exception as e:
-        return [{"error": True, "message": str(e)}]
-
-# Parser manual basado en pilas
-class ParserManual:
-    def __init__(self, tokens):
-        self.tokens = tokens
-        self.errors = []
-        self.stack = []  # Pila para verificar paréntesis y llaves
-
-    def parse(self):
-        last_token = None
-        for token in self.tokens:
-            if "error" in token:
-                # Detectar error de sintaxis
-                self.errors.append({
-                    "ERROR #": len(self.errors) + 1,
-                    "ubicación": f"línea {token['line']}, columna {token['column']}",
-                    "sujeto": token["value"],
-                    "tipo": "Error sintáctico",
-                    "posible solución": "Revisar la construcción del código."
-                })
-                continue
-
-            token_type = token["type"]
-            token_value = token["value"]
-
-            # Verificar errores en operadores mal ubicados
-            if token_type in ["PLUS", "MINUS", "STAR", "SLASH"]:
-                if last_token is None or last_token in ["PLUS", "MINUS", "STAR", "SLASH", "LPAR"]:
-                    self.errors.append({
-                        "ERROR #": len(self.errors) + 1,
-                        "ubicación": f"línea {token['line']}, columna {token['column']}",
-                        "sujeto": token_value,
-                        "tipo": "Error sintáctico",
-                        "posible solución": "Un operador debe seguir a un número o variable."
-                    })
-
-            # Manejo de paréntesis y llaves con pila
-            if token_type in ["LPAR", "LBRACE"]:
-                self.stack.append((token_type, token["line"], token["column"]))
-            elif token_type in ["RPAR", "RBRACE"]:
-                if not self.stack:
-                    self.errors.append({
-                        "ERROR #": len(self.errors) + 1,
-                        "ubicación": f"línea {token['line']}, columna {token['column']}",
-                        "sujeto": token_value,
-                        "tipo": "Error sintáctico",
-                        "posible solución": "Asegurar que cada '(' o '{' tenga su cierre correspondiente."
-                    })
-                else:
-                    self.stack.pop()
-
-            last_token = token_type
-
-        # Verificar paréntesis o llaves sin cerrar
-        while self.stack:
-            unclosed, line, column = self.stack.pop()
-            self.errors.append({
-                "ERROR #": len(self.errors) + 1,
-                "ubicación": f"línea {line}, columna {column}",
-                "sujeto": unclosed,
-                "tipo": "Error sintáctico",
-                "posible solución": "Asegurar que cada '(' y '{' tenga su cierre correspondiente."
-            })
-
-    def report(self):
-        if self.errors:
-            for error in self.errors:
-                print(f"ERROR #{error['ERROR #']}: ubicación ({error['ubicación']}) sujeto ({error['sujeto']}) tipo ({error['tipo']}) posible solución: {error['posible solución']}")
-        else:
-            print("✅ Programa válido")
-
-tokens_list = []
+tokens_list =[]
 
 class SymbolTable:
     def __init__(self, max_memory_size=100):
@@ -227,7 +142,7 @@ class SymbolTable:
         return all_symbols
     
     # Funciones locales para inferir tipo y valor
-    def infer_type(self, token_type, identifier):
+    def infer_type(self, token_type,identifier):
         # Obtenemos la categoría del token
         token_category = TOKENS_GRAMATICA.get(token_type, None)
         
@@ -293,6 +208,7 @@ def show_symbol_table():
     pop_up.title("Tabla de Símbolos")
     pop_up.geometry("1070x550")
 
+
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
     label.pack()
 
@@ -346,12 +262,35 @@ def show_symbol_table():
                         "Ámbito": "Global" if identifier == "global" else "Local",
                         "Dirección": f"0x{abs(hash(identifier)):08X}",
                         "Línea": line_number,
-                        "Valor": symbol_table_instance.get_value(identifier),
-                        "Estado": "Declarado" if is_declaration else "Usado",
+                        "Valor": symbol_table_instance.get_value(identifier),   #####
+                        "Estado": "Declarado" if is_declaration else "Usado",   ####
                         "Estructura": "Arreglo" if token_type == "ARREGLO" else "N/A",
                         "Uso": usage_count.get(identifier, 1)
                     }
                 
+    # for token in tokens_list:
+    #     parts = token.split(": ")
+    #     if len(parts) == 3:
+    #         line_number,type, details = parts[0], parts[1], parts[2]
+            
+    #         print("Token: ", token)
+    #         # Solo procesamos identificadores que no hayamos procesado antes
+    #         if type == "IDENTIFICADOR" and details not in processed_identifiers:
+    #             processed_identifiers.add(details)
+
+    #             symbol_details = {
+    #                 "Identificador": details,
+    #                 "Categoría": "Token",
+    #                 "Tipo": type,
+    #                 "Ámbito": "Global" if details == "global" else "Local",
+    #                 "Dirección": f"0x{abs(hash(details)):08X}",
+    #                 "Línea": line_number,
+    #                 "Valor": details,
+    #                 "Estado": "Declarado",
+    #                 "Estructura": "N/A",
+    #                 "Uso": usage_count.get(details, 1)  # Usamos el contador que calculamos antes
+    #             }
+
                     symbol_table_instance.add_symbol(identifier, symbol_details)
         except Exception as e:
             print(f"Error procesando token {token}: {str(e)}")
@@ -370,7 +309,7 @@ def show_symbol_table():
                 symbol.get("Valor", "")[:10],
                 symbol.get("Estado", "")[:10],
                 symbol.get("Estructura", "")[:15],
-                str(symbol.get("Uso", 0))[:10]
+                str(symbol.get("Uso", 0))[:10]  # Aseguramos que sea string para el formato
             )
             symbol_table_popup.insert("end", row_format)
         except Exception as e:
@@ -509,7 +448,31 @@ def show_ats_tree():
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
         canvas.bind_all("<MouseWheel>", on_mousewheel)
-
+        
+        # Botón para exportar   | ARREGLAR
+        # def export_to_image():
+        #     try:
+        #         from PIL import ImageGrab
+        #         import tempfile
+                
+        #         # Obtener coordenadas del canvas
+        #         x = tree_window.winfo_rootx() + canvas.winfo_x()
+        #         y = tree_window.winfo_rooty() + canvas.winfo_y()
+        #         x1 = x + canvas.winfo_width()
+        #         y1 = y + canvas.winfo_height()
+                
+        #         # Capturar y guardar
+        #         img = ImageGrab.grab((x, y, x1, y1))
+        #         temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        #         img.save(temp_file.name)
+        #         messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
+        #     except Exception as e:
+        #         messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
+        
+        # export_btn = tk.Button(tree_window, text="Exportar como imagen", 
+        #                      command=export_to_image)
+        # export_btn.pack(pady=5)
+        
     except UnexpectedInput as e:
         expected = ", ".join(e.expected) if e.expected else "nada"
         error_msg = f"Error de sintaxis en línea {e.line}:\n"
@@ -519,6 +482,7 @@ def show_ats_tree():
         messagebox.showerror("Error de Sintaxis", error_msg)
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
+
 
 TOKENS_GRAMATICA = {
     "INT": "ENTERO",
@@ -588,7 +552,6 @@ TOKENS_GRAMATICA = {
 root = tk.Tk()
 root.title("Analizador Léxico")
 root.geometry("1000x800")
-
 # Función para actualizar los números de línea
 def update_line_numbers(event=None):
     line_numbers.config(state="normal")
@@ -596,6 +559,7 @@ def update_line_numbers(event=None):
     line_count = int(input_code.index('end-1c').split('.')[0])  # Número de líneas del Text
     for i in range(1, line_count + 1):
         line_numbers.insert("end", f"{i}\n")  # Insertar los números de línea
+
     line_numbers.config(state="disabled")
 
 def compile_code():
@@ -609,56 +573,21 @@ def compile_code():
     tokens_list.clear()
     console_output.insert("end", "Compilando...\n")
 
-    code = input_code.get("1.0", "end-1c")
-    
-    # Primero verificar errores sintácticos con el parser manual
-    tokens = obtener_tokens(code)
-    parser_manual = ParserManual(tokens)
-    parser_manual.parse()
-    
-    # Luego obtener la lista de tokens para la tabla de símbolos
-    tokens_lex = obtener_lista_tokens(code)
-    
-    root.after(2000, lambda: show_compiling_complete(tokens_lex, parser_manual))  # Llamar a la función después de 2 segundos
+    tokens  = obtener_lista_tokens(input_code.get("1.0", "end-1c"))
 
-def show_compiling_complete(tokens, parser_manual):
+    root.after(2000, show_compiling_complete(tokens))  # Llamar a la función después de 2 segundos
+
+def show_compiling_complete(tokens):
     console_output.delete("1.0", "end")
     global tokens_list
     tokens_list = tokens
-    
-    # Mostrar errores del parser manual
-    if parser_manual.errors:
-        for error in parser_manual.errors:
-            console_output.insert("end", 
-                f"ERROR #{error['ERROR #']}: ubicación ({error['ubicación']}) sujeto ({error['sujeto']}) tipo ({error['tipo']}) posible solución: {error['posible solución']}\n")
-    elif not es_error(tokens):
-        console_output.insert("end", "Compilación completada exitosamente.\n")
+    if not es_error(tokens):
+        console_output.insert("end","Compilacion completada. \n")
     else:
-        console_output.insert("end", f"Compilación completada con errores léxicos.\n{tokens}")
-
-def es_error(resultado):
-    return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
-
-# Función para obtener lista de tokens
-def obtener_lista_tokens(codigo):
-    try:
-        tokens = list(parser.lex(codigo))
-        resultado = []
-        sentencia_id = 1
-        for i, token in enumerate(tokens):
-            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
-            resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
-            if token.type == "SEMICOLON":  # Detectar fin de sentencia
-                sentencia_id += 1
-        return resultado
-    except UnexpectedInput as e:
-        error_msg = f"Error en la línea {e.line}: \n{e.get_context(codigo)}"
-        return [error_msg]
-    except Exception as e:
-        return [f"Error en el análisis léxico: {str(e)}"]
+        console_output.insert("end", f"Compilación completada.\n{tokens}")
 
 # ------- FRAMES -------
-# FRAME PARA ICONOS
+# FRAMA PARA ICONOS
 frame_superior = tk.Frame(root, bg="lightgray", height=50, bd=2, relief="sunken")
 frame_superior.pack(fill="x")
 
@@ -697,7 +626,9 @@ input_code.bind("<KeyRelease>", update_line_numbers)
 # Scrollbar para los números de línea
 line_numbers_scrollbar = tk.Scrollbar(frame_izq, orient="vertical", command=line_numbers.yview)
 line_numbers_scrollbar.pack(side="right", fill="y")
+# Asociamos el scrollbar al Text widget de números de línea
 line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
+
 
 # Consola de errores | frame inferior
 console_output = tk.Text(frame_inferior, bg='black', fg='white', font=("Consolas", 10), height=10)
@@ -710,13 +641,41 @@ error_scrollbar = tk.Scrollbar(frame_inferior, orient="vertical" ,command=consol
 error_scrollbar.pack(side="right", fill="y")
 console_output.config(yscrollcommand=error_scrollbar.set)
 
+with open("Gramatica.ebnf", "r") as file:
+    grammar = file.read()
+
 # Crear el parser con Lark
 try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
+
 except Exception as e:
     print("❌ Error en la gramática:", e)
     exit()
 
+def es_error(resultado):
+    return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
+
+# Función para obtener lista de tokens
+def obtener_lista_tokens(codigo):
+    try:
+        tokens = list(parser.lex(codigo))
+        resultado = []
+        sentencia_id = 1
+        for i, token in enumerate(tokens):
+            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
+            resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
+            if token.type == "SEMICOLON":  # Detectar fin de sentencia
+                sentencia_id += 1
+        # print(resultado)
+        return resultado
+    except UnexpectedInput as e:
+        error_msg = f"Error en la línea {e.line}: \n{e.get_context(codigo)}"
+        return [error_msg]
+    except Exception as e:
+        return [f"Error en el análisis léxico: {str(e)}"]
+
+
 update_line_numbers()
+
 root.mainloop()
