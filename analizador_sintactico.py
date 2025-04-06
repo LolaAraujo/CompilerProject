@@ -195,7 +195,7 @@ class SymbolTable:
         # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
-            if identifier in ["void", "read", "func"]:
+            if identifier in ["void", "read", "func", "main"]:
                 return "función"
             elif identifier in ["print"]:
                 return "función de salida"
