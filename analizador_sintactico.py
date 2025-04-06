@@ -399,7 +399,7 @@ def show_symbol_table():
         try:
             parts = token.split(": ")
             if len(parts) == 3:
-                line_number, token_type, identifier = parts
+                line_number, token_type, identifier = parts[0], parts[1], parts[2]
                 
                 # Solo procesamos identificadores no vistos
                 if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
@@ -428,29 +428,6 @@ def show_symbol_table():
                         "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
                         "Uso": usage_count.get(identifier, 1)
                     }
-                
-    # for token in tokens_list:
-    #     parts = token.split(": ")
-    #     if len(parts) == 3:
-    #         line_number,type, details = parts[0], parts[1], parts[2]
-            
-    #         print("Token: ", token)
-    #         # Solo procesamos identificadores que no hayamos procesado antes
-    #         if type == "IDENTIFICADOR" and details not in processed_identifiers:
-    #             processed_identifiers.add(details)
-
-    #             symbol_details = {
-    #                 "Identificador": details,
-    #                 "Categoría": "Token",
-    #                 "Tipo": type,
-    #                 "Ámbito": "Global" if details == "global" else "Local",
-    #                 "Dirección": f"0x{abs(hash(details)):08X}",
-    #                 "Línea": line_number,
-    #                 "Valor": details,
-    #                 "Estado": "Declarado",
-    #                 "Estructura": "N/A",
-    #                 "Uso": usage_count.get(details, 1)  # Usamos el contador que calculamos antes
-    #             }
 
                     symbol_table_instance.add_symbol(identifier, symbol_details)
         except Exception as e:
@@ -609,30 +586,6 @@ def show_ats_tree():
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
         canvas.bind_all("<MouseWheel>", on_mousewheel)
-        
-        # Botón para exportar   | ARREGLAR
-        # def export_to_image():
-        #     try:
-        #         from PIL import ImageGrab
-        #         import tempfile
-                
-        #         # Obtener coordenadas del canvas
-        #         x = tree_window.winfo_rootx() + canvas.winfo_x()
-        #         y = tree_window.winfo_rooty() + canvas.winfo_y()
-        #         x1 = x + canvas.winfo_width()
-        #         y1 = y + canvas.winfo_height()
-                
-        #         # Capturar y guardar
-        #         img = ImageGrab.grab((x, y, x1, y1))
-        #         temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-        #         img.save(temp_file.name)
-        #         messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
-        #     except Exception as e:
-        #         messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
-        
-        # export_btn = tk.Button(tree_window, text="Exportar como imagen", 
-        #                      command=export_to_image)
-        # export_btn.pack(pady=5)
         
     except UnexpectedInput as e:
         expected = ", ".join(e.expected) if e.expected else "nada"
