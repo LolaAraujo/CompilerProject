@@ -1,4 +1,3 @@
-# Agregar al inicio del archivo, después de los imports
 class TablaSimbolos:
     def __init__(self):
         self.ambitos = {"global": {}}
@@ -70,92 +69,40 @@ class AnalizadorSemantico:
 
     def reportar_errores(self):
         if not self.errores:
-            return ["✅ Programa válido (análisis semántico sin errores)."]
+            print("✅ Programa válido (análisis semántico sin errores).")
         else:
-            return [f"🔍 Errores semánticos detectados:\n"] + [f"**ERROR {i}:** {error}" for i, error in enumerate(self.errores, start=1)]
+            print("🔍 Errores semánticos detectados:\n")
+            for i, error in enumerate(self.errores, start=1):
+                print(f"**ERROR {i}:** {error}")
 
 
-# Modificar la función compile_code para incluir el análisis semántico
-def compile_code():
-    global tokens_list, symbol_table_instance
-    
-    code = input_code.get("1.0", "end-1c").strip()
-    if not code:
-        console_output.delete("1.0", "end")
-        console_output.insert("end", "No hay código para compilar.\n")
-        return
+# === Ejemplo de uso manual ===
+if __name__ == "__main__":
+    sem = AnalizadorSemantico()
 
-    # Limpiar resultados anteriores
-    console_output.delete("1.0", "end")
-    symbol_table_instance.clear()
-    tokens_list.clear()
-    error_manager.clear_errors()
-    
-    console_output.insert("end", "🔍 Analizando código...\n")
-    root.update()  # Actualizar la interfaz para mostrar el mensaje
+    # Simulación de código fuente parseado:
+    # Línea 1: int x;
+    sem.declarar_variable("x", "int", 1)
 
-    try:
-        # Análisis léxico (capturar tokens para tabla de símbolos)
-        tokens_lexicos = list(parser.lex(code))  # <-- Esto obtiene los tokens para la tabla
-        tokens_list = [
-            f"{i+1}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
-            for i, t in enumerate(tokens_lexicos)
-        ]
-        
-        # Análisis sintáctico
-        tree = parser.parse(code)
-        console_output.insert("end", "✅ Análisis sintáctico completado sin errores\n")
-        
-        # Análisis semántico
-        sem = AnalizadorSemantico()
-        # Simular el análisis semántico basado en los tokens
-        for token in tokens_list:
-            parts = token.split(": ")
-            if len(parts) == 3:
-                line_number, token_type, token_value = parts
-                line_number = int(line_number)
-                
-                # Detectar declaraciones de variables (ejemplo: "int x;")
-                if token_type == "PALABRA RESERVADA" and token_value in ["int", "float", "bool", "char", "string"]:
-                    # Buscar el identificador en el siguiente token
-                    next_token = next((t for t in tokens_list if t.startswith(f"{line_number}:") and "IDENTIFICADOR" in t), None)
-                    if next_token:
-                        ident = next_token.split(": ")[2]
-                        sem.declarar_variable(ident, token_value, line_number)
-                
-                # Detectar asignaciones (ejemplo: "x = 5;")
-                elif token_type == "IDENTIFICADOR" and "=" in token_value:
-                    ident, value = token_value.split("=", 1)
-                    ident = ident.strip()
-                    value = value.strip()
-                    
-                    # Inferir el tipo del valor (simplificado)
-                    tipo_valor = "int" if value.isdigit() else "float" if "." in value else "string"
-                    sem.asignar_variable(ident, tipo_valor, line_number)
-                
-                # Detectar usos de variables (ejemplo: "print(x);")
-                elif token_type == "IDENTIFICADOR":
-                    sem.usar_variable(token_value, line_number)
-        
-        # Mostrar resultados del análisis semántico
-        errores_semanticos = sem.reportar_errores()
-        for error in errores_semanticos:
-            console_output.insert("end", f"{error}\n")
-        
-        # Mostrar advertencias si hay tokens sospechosos
-        mostrar_advertencias(tokens_list)
-        
-    except UnexpectedInput as e:
-        # Si hay error, igual guardamos los tokens capturados hasta el error
-        tokens_lexicos = list(parser.lex(code))
-        tokens_list = [
-            f"{i+1}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
-            for i, t in enumerate(tokens_lexicos)
-        ]
-        mostrar_error_sintactico(e, code)
-    except Exception as e:
-        mostrar_error_general(e)
-    finally:
-        # Mostrar tabla de símbolos si hay tokens capturados
-        if tokens_list:
-            show_symbol_table()
+    # Línea 2: x = 5;
+    sem.asignar_variable("x", "int", 2)
+
+    # Línea 3: imprimir x;
+    sem.usar_variable("x", 3)
+
+    # Línea 4: y = 10; (uso sin declarar)
+    sem.asignar_variable("y", "int", 4)
+
+    # Línea 5: const float pi = 3.14;
+    sem.declarar_variable("pi", "float", 5, constante=True)
+    sem.asignar_variable("pi", "float", 6)  # reasignación indebida
+
+    # Línea 7: z; (uso sin inicializar)
+    sem.declarar_variable("z", "int", 7)
+    sem.usar_variable("z", 8)
+
+    # Línea 9: x = "hola"; (error de tipo)
+    sem.asignar_variable("x", "string", 9)
+
+    # Reporte final
+    sem.reportar_errores()
