@@ -24,7 +24,6 @@ from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
 
 tokens_list =[]
 
-# Agregar al inicio del archivo, después de los imports
 class ErrorManager:
     def __init__(self):
         self.error_count = 0
@@ -69,7 +68,6 @@ class SymbolTable:
         """
         # In-memory storage for symbols
         self.symbols = {}
-        self.values = {}
 
         # Maximum memory size for in-memory storage
         self.max_memory_size = max_memory_size
@@ -92,7 +90,24 @@ class SymbolTable:
         """
         current_memory_usage = sum(len(json.dumps(symbol)) for symbol in self.symbols.values())
         return current_memory_usage + symbol_size <= self.max_memory_size
-    
+
+    def add_symbol(self, identifier, details):
+        """
+        Add a symbol to the table, managing memory automatically
+
+        Args:
+            identifier (str): The symbol's identifier
+            details (dict): Detailed information about the symbol
+        """
+        symbol_size = len(json.dumps(details))
+
+        if not self._is_memory_available(symbol_size):
+            # If memory is full, move to secondary storage
+            self._move_to_secondary_storage(identifier, details)
+        else:
+            # Store in memory
+            self.symbols[identifier] = details
+
     def _move_to_secondary_storage(self, identifier, details):
         """
         Move symbol to secondary storage
@@ -117,123 +132,27 @@ class SymbolTable:
         except Exception as e:
             print(f"Error in secondary storage: {e}")
 
-    def add_symbol(self, identifier, details):
+    def get_symbol(self, identifier):
         """
-        Add a symbol to the table, managing memory automatically
+        Retrieve a symbol from memory or secondary storage
 
         Args:
             identifier (str): The symbol's identifier
-            details (dict): Detailed information about the symbol
+
+        Returns:
+            dict: Symbol details or None if not found
         """
-        symbol_size = len(json.dumps(details))
-
-        if not self._is_memory_available(symbol_size):
-            # If memory is full, move to secondary storage
-            self._move_to_secondary_storage(identifier, details)
-        else:
-            # Store in memory
-            self.symbols[identifier] = details
-            
-    def update_value(self, identifier, value):
-        """Update the value of an existing symbol"""
+        # First check in-memory symbols
         if identifier in self.symbols:
-            self.values[identifier] = value
-            self.symbols[identifier]["Valor"] = self._format_value(value)
-            
-            # Si está en almacenamiento secundario, actualizarlo allí también
-            if identifier not in self.symbols:
-                self._update_secondary_storage(identifier, {"Valor": self._format_value(value)})
-        else:
-            print(f"Warning: Variable '{identifier}' not declared before assignment")
+            return self.symbols[identifier]
 
-    def _format_value(self, value):
-        """Format values for display"""
-        if value is None:
-            return "No inicializado"
-        elif isinstance(value, str):
-            return f'"{value}"'
-        elif isinstance(value, (int, float, bool)):
-            return str(value)
-        elif isinstance(value, (list, dict)):
-            shortened = json.dumps(value)
-            return (shortened[:50] + "...") if len(shortened) > 50 else shortened
-        return str(value)
-
-    def infer_type(self, token_type, identifier, value=None):
-        """Infer data type based on token and actual value"""
-        if value is not None:
-            if isinstance(value, bool):
-                return "bool"
-            elif isinstance(value, int):
-                return "int"
-            elif isinstance(value, float):
-                return "float"
-            elif isinstance(value, str):
-                return "str"
-            elif isinstance(value, list):
-                return "list"
-            elif isinstance(value, dict):
-                return "dict"
-        
-        token_category = TOKENS_GRAMATICA.get(token_type, None)
-        type_mapping = {
-            "ENTERO": "int", "NUMERO": "int",
-            "FLOTANTE": "float", "NUMERO FLOTANTE": "float",
-            "BOOLEANO": "bool", "CARACTER": "str",
-            "CADENA": "str", "ARREGLO": "list",
-            "DICCIONARIO": "dict"
-        }
-        
-        if token_category in type_mapping:
-            return type_mapping[token_category]
-        
-        if token_type == "IDENTIFICADOR":
-            lower_id = identifier.lower()
-            if lower_id.startswith(('is_', 'has_', 'can_')): 
-                return "bool"
-            elif lower_id.endswith(('count', 'total', 'num', 'id', 'index')):
-                return "int"
-            elif lower_id.endswith(('price', 'amount', 'value', 'sum', 'avg')):
-                return "float"
-            elif lower_id.endswith(('name', 'text', 'msg', 'title')):
-                return "str"
-            elif lower_id.endswith(('arr', 'list', 'set')):
-                return "list"
-            elif lower_id.endswith(('dict', 'map')):
-                return "dict"
-        
-        return "unknown"
-
-    def clear(self):
-        """Clear all symbols and values"""
-        self.symbols.clear()
-        self.values.clear()
-        with open(self.secondary_storage_path, 'w') as f:
-            f.write('{}')
-
-    
-
-    # def get_symbol(self, identifier):
-    #     """
-    #     Retrieve a symbol from memory or secondary storage
-
-    #     Args:
-    #         identifier (str): The symbol's identifier
-
-    #     Returns:
-    #         dict: Symbol details or None if not found
-    #     """
-    #     First check in-memory symbols
-    #     if identifier in self.symbols:
-    #         return self.symbols[identifier]
-
-    #     If not in memory, check secondary storage
-    #     try:
-    #         with open(self.secondary_storage_path, 'r') as f:
-    #             storage = json.load(f)
-    #             return storage.get(identifier)
-    #     except (FileNotFoundError, json.JSONDecodeError):
-    #         return None
+        # If not in memory, check secondary storage
+        try:
+            with open(self.secondary_storage_path, 'r') as f:
+                storage = json.load(f)
+                return storage.get(identifier)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
 
     def get_all_symbols(self):
         """
@@ -257,106 +176,184 @@ class SymbolTable:
         return all_symbols
     
     # Funciones locales para inferir tipo y valor
-    # def infer_type(self, token_type,identifier):
-    #     Obtenemos la categoría del token
-    #     token_category = TOKENS_GRAMATICA.get(token_type, None)
+    def infer_type(self, token_type,identifier):
+        # Obtenemos la categoría del token
+        token_category = TOKENS_GRAMATICA.get(token_type, None)
         
-    #     Asignación directa de tipos basada en tu gramática
-    #     if token_category in ["ENTERO", "NUMERO"]:
-    #         return "entero"
-    #     elif token_category in ["FLOTANTE", "NUMERO FLOTANTE"]:
-    #         return "real"
-    #     elif token_category == "BOOLEANO":
-    #         return "booleano"
-    #     elif token_category in ["CARACTER", "CADENA"]:
-    #         return "cadena"
-    #     elif token_category == "ARREGLO":
-    #         return "arreglo"
-    #     Para identificadores (variables/funciones)
-    #     if token_type == "IDENTIFICADOR":
-    #         Verificamos si es una función conocida
-    #         if identifier in ["void", "read", "func"]:
-    #             return "función"
-    #         elif identifier in ["print"]:
-    #             return "función de salida"
+        # Asignación directa de tipos basada en tu gramática
+        if token_category in ["ENTERO", "NUMERO"]:
+            return "entero"
+        elif token_category in ["FLOTANTE", "NUMERO FLOTANTE"]:
+            return "real"
+        elif token_category == "BOOLEANO":
+            return "booleano"
+        elif token_category in ["CARACTER", "CADENA"]:
+            return "cadena"
+        elif token_category == "ARREGLO":
+            return "arreglo"
+        # Para identificadores (variables/funciones)
+        if token_type == "IDENTIFICADOR":
+            # Verificamos si es una función conocida
+            if identifier in ["void", "read", "func", "main"]:
+                return "función"
+            elif identifier in ["print"]:
+                return "función de salida"
             
-    #         Inferencia por convenciones de nombre
-    #         lower_id = identifier.lower()
-    #         if lower_id.startswith(('is_', 'has_', 'can_')): 
-    #             return "booleano"
-    #         elif lower_id.endswith(('count', 'total', 'num', 'id', 'index')):
-    #             return "entero"
-    #         elif lower_id.endswith(('price', 'amount', 'value', 'sum', 'avg')):
-    #             return "real"
-    #         elif lower_id.endswith(('name', 'text', 'msg', 'title')):
-    #             return "cadena"
-    #         elif lower_id.endswith(('arr', 'list', 'set')):
-    #             return "arreglo"
+            # Inferencia por convenciones de nombre
+            lower_id = identifier.lower()
+            if lower_id.startswith(('is_', 'has_', 'can_')): 
+                return "booleano"
+            elif lower_id.endswith(('count', 'total', 'num', 'id', 'index')):
+                return "entero"
+            elif lower_id.endswith(('price', 'amount', 'value', 'sum', 'avg')):
+                return "real"
+            elif lower_id.endswith(('name', 'text', 'msg', 'title')):
+                return "cadena"
+            elif lower_id.endswith(('arr', 'list', 'set')):
+                return "arreglo"
         
-    #     return "variable"  # Valor por defecto
+        return "variable"  # Valor por defecto
     
-    # def get_value(self, identifier, token_value=None):
-    #     """Obtiene el valor inicial si está disponible"""
-    #     if token_value:
-    #         return token_value
-    #     return "No inicializado"
-    
-    # def update_value(self, identifier, value):
-    #     """
-    #     Actualiza el valor de una variable en la tabla de símbolos
+    def get_value(self, identifier, token_value=None, token_type=None):
+        """Obtiene el valor inicial si está disponible"""
+        # Si ya tenemos un valor explícito
+        if token_value:
+            # Para tipos numéricos, formatear adecuadamente
+            if token_type in ["ENTERO", "NUMERO"]:
+                return str(int(token_value))
+            elif token_type in ["FLOTANTE", "NUMERO FLOTANTE"]:
+                return str(float(token_value))
+            # Para cadenas, mostrar con comillas
+            elif token_type in ["CADENA", "CARACTER"]:
+                return f'"{token_value}"'
+            # Para booleanos, normalizar
+            elif token_type == "BOOLEANO":
+                return token_value.lower()
+            return token_value
         
-    #     Args:
-    #         identifier (str): Nombre de la variable
-    #         value: Valor asignado
-    #     """
-    #     if identifier in self.symbols:
-    #         self.values[identifier] = value
-    #         self.symbols[identifier]["Valor"] = self._format_value(value)
-    #     else:
-    #         print(f"Advertencia: Variable '{identifier}' no declarada antes de su asignación")
-    
-    # def _format_value(self, value):
-    #     """Formatea valores para su visualización"""
-    #     if value is None:
-    #         return "No inicializado"
-    #     elif isinstance(value, str):
-    #         return f'"{value}"'
-    #     elif isinstance(value, (int, float, bool)):
-    #         return str(value)
-    #     elif isinstance(value, (list, dict)):
-    #         return json.dumps(value, indent=2)[:50] + "..." if len(json.dumps(value)) > 50 else json.dumps(value)
-    #     return str(value)
-    
-    # Ejemplo para el analizador sintáctico - cuando encuentres una asignación
-    # def process_assignment(self, identifier, expression):
-    #     Calcula el valor de la expresión (aquí debes implementar tu lógica de evaluación)
-    #     evaluated_value = self.evaluate_expression(expression)
+        # Buscar en los tokens si hay una asignación para este identificador
+        for token in tokens_list:
+            parts = token.split(": ")
+            if len(parts) == 3:
+                # Detectar patrones de asignación como "x = 5"
+                if "ASIGNACION" in parts[1] and f"{identifier} =" in parts[2]:
+                    # Extraer valor después del signo igual
+                    value_part = parts[2].split("=")[1].strip()
+                    return value_part
         
-    #     Actualiza la tabla de símbolos
-    #     self.symbol_table.update_value(identifier, evaluated_value)
+        return "No inicializado"
+    
+    def determine_state(self, identifier):
+        """Determina el estado de un identificador basado en su uso en el código"""
+        declared = False
+        initialized = False
+        used = False
         
-    # def evaluate_expression(self, expression):
-    #     """Evalúa una expresión y retorna su valor (versión simplificada)"""
-    #     try:
-    #         Intenta evaluar como expresión aritmética
-    #         return eval(expression, {"__builtins__": None}, {})
-    #     except:
-    #         Si falla, trata como string
-    #         if expression.startswith('"') and expression.endswith('"'):
-    #             return expression[1:-1]
-    #         elif expression.startswith("'") and expression.endswith("'"):
-    #             return expression[1:-1]
-    #         Para otros casos (como identificadores)
-    #         return expression
+        for token in tokens_list:
+            parts = token.split(": ")
+            if len(parts) == 3:
+                line_number, token_type, token_value = parts
+                
+                # Detectar declaraciones (int x, float y, etc.)
+                if token_value == identifier and any(
+                    t for t in tokens_list if t.split(": ")[2].startswith(f"{identifier} :") 
+                    or ("DECLARACION" in t and identifier in t)
+                ):
+                    declared = True
+                
+                # Detectar inicializaciones (x = 5, etc.)
+                if "ASIGNACION" in token_type and token_value.startswith(f"{identifier} ="):
+                    initialized = True
+                
+                # Detectar usos (en expresiones, llamadas, etc.)
+                if token_value == identifier and token_type == "IDENTIFICADOR":
+                    used = True
+        
+        # Determinar estado final
+        if declared and initialized and used:
+            return "Declarado, Inicializado, Usado"
+        elif declared and initialized:
+            return "Declarado, Inicializado"
+        elif declared and used:
+            return "Declarado, Usado"
+        elif declared:
+            return "Solo Declarado"
+        elif used:
+            return "Usado (sin declarar)"
+        else:
+            return "Desconocido"
+        
+    def get_structure_info(self, identifier, token_type=None):
+        """Obtiene información de estructura para arreglos o tipos compuestos"""
+        # Para arreglos
+        if token_type == "ARREGLO":
+            # Buscar declaraciones de arreglo
+            for token in tokens_list:
+                if ": ARREGLO: " in token and identifier in token:
+                    # Intentar extraer dimensiones
+                    try:
+                        dimensions = re.findall(r'\[(\d+)\]', token)
+                        if dimensions:
+                            return f"Arreglo {len(dimensions)}D: [{' × '.join(dimensions)}]"
+                    except:
+                        pass
+            return "Arreglo"
+        
+        # Para estructuras/registros
+        elif token_type == "STRUCT":
+            # Buscar campos de estructura
+            struct_def = None
+            for i, token in enumerate(tokens_list):
+                if ": STRUCT: " in token and identifier in token:
+                    struct_def = i
+                    break
+            
+            if struct_def is not None:
+                # Buscar campos entre llaves
+                fields = []
+                brace_level = 0
+                for i in range(struct_def, len(tokens_list)):
+                    token = tokens_list[i]
+                    if ": LLAVE INICIO: " in token:
+                        brace_level += 1
+                    elif ": LLAVE CIERRE: " in token:
+                        brace_level -= 1
+                        if brace_level == 0:
+                            break
+                    elif brace_level > 0 and ": IDENTIFICADOR: " in token:
+                        fields.append(token.split(": ")[2])
+                
+                if fields:
+                    return f"Struct con {len(fields)} campos"
+            
+            return "Struct"
+        
+        # Para funciones
+        elif identifier in ["main", "print", "void", "read", "func"] or token_type == "FUNCIÓN":
+            # Buscar parámetros y tipo de retorno
+            for token in tokens_list:
+                if f": {identifier}(" in token or f": {identifier} (" in token:
+                    params = re.search(r'\((.*?)\)', token.split(": ")[2])
+                    return_type = re.search(r'-> (.*?)($|\s|{)', token.split(": ")[2])
+                    
+                    params_str = params.group(1) if params else ""
+                    return_str = return_type.group(1) if return_type else "void"
+                    
+                    param_count = len(params_str.split(",")) if params_str.strip() else 0
+                    return f"Función: {param_count} param(s) -> {return_str}"
+            
+            return "Función"
+        
+        return "N/A"
 
-    # def clear(self):
-    #     """
-    #     Clear all symbols from memory and secondary storage
-    #     """
-    #     self.symbols.clear()
+    def clear(self):
+        """
+        Clear all symbols from memory and secondary storage
+        """
+        self.symbols.clear()
 
-    #     Clear secondary storage file
-    #     open(self.secondary_storage_path, 'w').close()
+        # Clear secondary storage file
+        open(self.secondary_storage_path, 'w').close()
 
 # Modify the existing show_symbol_table function
 def show_symbol_table():
@@ -369,7 +366,7 @@ def show_symbol_table():
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Tabla de Símbolos")
-    pop_up.geometry("1070x550")
+    pop_up.geometry("1090x550")
 
 
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
@@ -380,9 +377,9 @@ def show_symbol_table():
 
     # Headers
     headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección" ,"Línea", "Valor","Estado", "Estructura", "Uso"]
-    header_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:10} {:10} {:15} {:10}\n".format(*headers)
+    header_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:20} {:20} {:15} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
-    symbol_table_popup.insert("end", "-" * 150 + "\n")
+    symbol_table_popup.insert("end", "-" * 170 + "\n")
     
     print("Tokens List: ", tokens_list)
     # Count the usage of each identifier
@@ -400,74 +397,38 @@ def show_symbol_table():
     for token in tokens_list:
         try:
             parts = token.split(": ")
-            if len(parts) >= 3 and parts[1] == "IDENTIFICADOR":
-                identifier = parts[2].strip()
-                usage_count[identifier] = usage_count.get(identifier, 0) + 1
-        except Exception as e:
-            print(f"Error contando usos: {e}")
-    
-    processed_ids = set()
-    for token in tokens_list:
-        try:
-            parts = token.split(": ")
-            if len(parts) >= 3:
-                line, token_type, identifier = parts[0], parts[1], parts[2]
+            if len(parts) == 3:
+                line_number, token_type, identifier = parts[0], parts[1], parts[2]
                 
-                if token_type == "IDENTIFICADOR" and identifier not in processed_ids:
-                    processed_ids.add(identifier)
+                # Solo procesamos identificadores no vistos
+                if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
                     
-                    # Obtener valor si existe en partes adicionales
-                    value = ": ".join(parts[3:]) if len(parts) > 3 else None
-                    
-                    # Determinar categoría
-                    if identifier.lower() in ["main", "print", "void", "read", "func"]:
+                    # Determinar categoría basada en el token
+                    if identifier in ["main", "print", "void", "read", "func"]:
                         category = "FUNCIÓN"
                     else:
                         category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
+                        
+                    # Detección básica de declaraciones (mejorable)
+                    is_declaration = any(
+                        t for t in tokens_list 
+                        if f"{identifier}:" in t and "DECLARACION" in t
+                    )
                     
                     symbol_details = {
                         "Identificador": identifier,
                         "Categoría": category,
-                        "Tipo": symbol_table_instance.infer_type(token_type, identifier, value),
-                        "Ámbito": "Global" if identifier.lower() == "global" else "Local",
+                        "Tipo": symbol_table_instance.infer_type(token_type, identifier),
+                        "Ámbito": "Global" if identifier == "global" else "Local",
                         "Dirección": f"0x{abs(hash(identifier)):08X}",
-                        "Línea": line,
-                        "Valor": symbol_table_instance._format_value(value),   #####
-                        "Estado": "Declarado" if any(
-                            t for t in tokens_list 
-                            if f"{identifier}:" in t and "DECLARACION" in t
-                        ) else "Usado",   ####
-                        "Estructura": "Arreglo" if token_type == "ARREGLO" else "N/A",
+                        "Línea": line_number,
+                        "Valor": symbol_table_instance.get_value(identifier, None, token_type),  # Pasamos token_type
+                        "Estado": symbol_table_instance.determine_state(identifier),
+                        "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
                         "Uso": usage_count.get(identifier, 1)
                     }
-                
-    # for token in tokens_list:
-    #     parts = token.split(": ")
-    #     if len(parts) == 3:
-    #         line_number,type, details = parts[0], parts[1], parts[2]
-            
-    #         print("Token: ", token)
-    #         # Solo procesamos identificadores que no hayamos procesado antes
-    #         if type == "IDENTIFICADOR" and details not in processed_identifiers:
-    #             processed_identifiers.add(details)
-
-    #             symbol_details = {
-    #                 "Identificador": details,
-    #                 "Categoría": "Token",
-    #                 "Tipo": type,
-    #                 "Ámbito": "Global" if details == "global" else "Local",
-    #                 "Dirección": f"0x{abs(hash(details)):08X}",
-    #                 "Línea": line_number,
-    #                 "Valor": details,
-    #                 "Estado": "Declarado",
-    #                 "Estructura": "N/A",
-    #                 "Uso": usage_count.get(details, 1)  # Usamos el contador que calculamos antes
-    #             }
 
                     symbol_table_instance.add_symbol(identifier, symbol_details)
-                    if value is not None:
-                        symbol_table_instance.update_value(identifier, value)
-                        
         except Exception as e:
             print(f"Error procesando token {token}: {str(e)}")
             continue
@@ -475,15 +436,15 @@ def show_symbol_table():
     all_symbols = symbol_table_instance.get_all_symbols()
     for identifier, symbol in all_symbols.items():
         try: 
-            row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:10} {:10} {:15} {:10}\n".format(
+            row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:20} {:20} {:15} {:10}\n".format(
                 symbol.get("Identificador", "")[:20],
                 symbol.get("Categoría", "")[:20],
                 symbol.get("Tipo", "")[:15],
                 symbol.get("Ámbito", "")[:15],
                 symbol.get("Dirección", "0x0000")[:15],
                 symbol.get("Línea", "")[:10],
-                symbol.get("Valor", "")[:10],
-                symbol.get("Estado", "")[:10],
+                symbol.get("Valor", "")[:20],
+                symbol.get("Estado", "")[:20],
                 symbol.get("Estructura", "")[:15],
                 str(symbol.get("Uso", 0))[:10]  # Aseguramos que sea string para el formato
             )
@@ -624,30 +585,6 @@ def show_ats_tree():
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
         canvas.bind_all("<MouseWheel>", on_mousewheel)
-        
-        # Botón para exportar   | ARREGLAR
-        # def export_to_image():
-        #     try:
-        #         from PIL import ImageGrab
-        #         import tempfile
-                
-        #         # Obtener coordenadas del canvas
-        #         x = tree_window.winfo_rootx() + canvas.winfo_x()
-        #         y = tree_window.winfo_rooty() + canvas.winfo_y()
-        #         x1 = x + canvas.winfo_width()
-        #         y1 = y + canvas.winfo_height()
-                
-        #         # Capturar y guardar
-        #         img = ImageGrab.grab((x, y, x1, y1))
-        #         temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-        #         img.save(temp_file.name)
-        #         messagebox.showinfo("Éxito", f"Árbol exportado como:\n{temp_file.name}")
-        #     except Exception as e:
-        #         messagebox.showerror("Error", f"No se pudo exportar: {str(e)}")
-        
-        # export_btn = tk.Button(tree_window, text="Exportar como imagen", 
-        #                      command=export_to_image)
-        # export_btn.pack(pady=5)
         
     except UnexpectedInput as e:
         expected = ", ".join(e.expected) if e.expected else "nada"
@@ -884,7 +821,6 @@ frame_izq.pack(side="left", fill="both", expand=True)
 frame_inferior = tk.Frame(root, bg="lightgray", height=70)
 frame_inferior.pack(fill="x")
 
-
 # ----- OBJETOS EN FRAMES -----
 # ----- Redimensionar imagen -----
 original_image = Image.open("compilar.png")  # Cargar imagen
@@ -962,6 +898,23 @@ def obtener_lista_tokens(codigo):
                 resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
                 if token.type == "SEMICOLON":
                     sentencia_id += 1
+                # Dentro de obtener_lista_tokens, después de procesar un token normal
+                # Para detección de arreglos
+                if token.type == "IDENTIFICADOR" and i+1 < len(tokens) and tokens[i+1].type == "LBRACKET":
+                    # Buscar dimensiones del arreglo
+                    j = i + 1
+                    while j < len(tokens) and tokens[j].type == "LBRACKET":
+                        j += 1  # Avanzar hasta encontrar el contenido
+                        while j < len(tokens) and tokens[j].type != "RBRACKET":
+                            j += 1
+                        j += 1  # Pasar el RBRACKET
+                    
+                    # Agregar token especial para el arreglo
+                    resultado.append(f"{token.line}: ARREGLO: {token.value}[]")
+
+                # Para detección de estructuras
+                if token.type == "STRUCT" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
+                    resultado.append(f"{token.line}: STRUCT: {tokens[i+1].value}")
         
         return resultado
         

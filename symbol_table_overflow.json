@@ -4,7 +4,11 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
+<<<<<<< HEAD
     "Direcci\u00f3n": "0x35DE40C6CAF473AF",
+=======
+    "Direcci\u00f3n": "0x77B6A4C4B62927A9",
+>>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
     "L\u00ednea": "2",
     "Valor": "No inicializado",
     "Estado": "Usado",
@@ -16,7 +20,11 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
+<<<<<<< HEAD
     "Direcci\u00f3n": "0x27D808FAD0708E1B",
+=======
+    "Direcci\u00f3n": "0x64A915658B26B52E",
+>>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
     "L\u00ednea": "14",
     "Valor": "No inicializado",
     "Estado": "Usado",
@@ -28,7 +36,11 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
+<<<<<<< HEAD
     "Direcci\u00f3n": "0x57E72FCC8F3C2B87",
+=======
+    "Direcci\u00f3n": "0x4FD3088C18EB9322",
+>>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
     "L\u00ednea": "16",
     "Valor": "No inicializado",
     "Estado": "Usado",
