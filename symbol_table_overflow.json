@@ -4,14 +4,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-<<<<<<< HEAD
-    "Direcci\u00f3n": "0x35DE40C6CAF473AF",
-=======
-    "Direcci\u00f3n": "0x77B6A4C4B62927A9",
->>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
-    "L\u00ednea": "2",
+    "Direcci\u00f3n": "0x3B1EA32C386BFB3A",
+    "L\u00ednea": "1",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 1
   },
@@ -20,14 +16,10 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-<<<<<<< HEAD
-    "Direcci\u00f3n": "0x27D808FAD0708E1B",
-=======
-    "Direcci\u00f3n": "0x64A915658B26B52E",
->>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
-    "L\u00ednea": "14",
+    "Direcci\u00f3n": "0x7CE9EAE3435422AD",
+    "L\u00ednea": "2",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 2
   },
@@ -36,15 +28,23 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-<<<<<<< HEAD
-    "Direcci\u00f3n": "0x57E72FCC8F3C2B87",
-=======
-    "Direcci\u00f3n": "0x4FD3088C18EB9322",
->>>>>>> 2eeec6f3c203588ccaa0306194fc921dbd077827
-    "L\u00ednea": "16",
+    "Direcci\u00f3n": "0x30ECAD654D30C5ED",
+    "L\u00ednea": "2",
     "Valor": "No inicializado",
-    "Estado": "Usado",
+    "Estado": "Usado (sin declarar)",
     "Estructura": "N/A",
     "Uso": 2
+  },
+  "t": {
+    "Identificador": "t",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x1184C27B1C20136F",
+    "L\u00ednea": "5",
+    "Valor": "No inicializado",
+    "Estado": "Usado (sin declarar)",
+    "Estructura": "N/A",
+    "Uso": 1
   }
 }
