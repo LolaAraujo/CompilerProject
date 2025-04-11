@@ -1,41 +1,38 @@
-<<<<<<< HEAD
-=======
 {
   "suma": {
     "Identificador": "suma",
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x343F8D0C25C3B94A",
+    "\u00c1mbito": "local",
+    "Direcci\u00f3n": "0xE828D65A6D4411",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
-    "Estado": "Usado (sin declarar)",
-    "Estructura": "N/A",
-    "Uso": 1
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": "1"
   },
   "a": {
     "Identificador": "a",
     "Categor\u00eda": "IDENTIFICADOR",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x150C4ECA41BFBDDF",
-    "L\u00ednea": "2",
+    "Tipo": "INT",
+    "\u00c1mbito": "global",
+    "Direcci\u00f3n": "0x1E73E1D3E25951B0",
+    "L\u00ednea": "1",
     "Valor": "No inicializado",
-    "Estado": "Usado (sin declarar)",
-    "Estructura": "N/A",
-    "Uso": 2
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": "2"
   },
   "b": {
     "Identificador": "b",
     "Categor\u00eda": "IDENTIFICADOR",
-    "Tipo": "variable",
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x721E10DCF382B07B",
-    "L\u00ednea": "2",
+    "Tipo": "INT",
+    "\u00c1mbito": "global",
+    "Direcci\u00f3n": "0x4D6773C5F16F3036",
+    "L\u00ednea": "1",
     "Valor": "No inicializado",
-    "Estado": "Usado (sin declarar)",
-    "Estructura": "N/A",
-    "Uso": 2
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": "2"
   }
 }
->>>>>>> 0456fd64fdaec5f50b06a54fd9c49078a29d8c6e
