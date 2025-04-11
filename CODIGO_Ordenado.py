@@ -784,7 +784,7 @@ def mostrar_advertencias(tokens):
                 warnings.append(f"Identificador con mezcla de mayúsculas/minúsculas: '{ident}'")
     
     if warnings:
-        console_output.insert("end", "\n⚠️ ADVERTENCIAS:\n")
+        console_output.insert("end", "\n ADVERTENCIAS:\n")
         for warn in warnings:
             console_output.insert("end", f"• {warn}\n")
 
