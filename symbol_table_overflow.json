@@ -1,15 +1,10 @@
 {
-<<<<<<< HEAD
   "suma": {
     "Identificador": "suma",
-=======
-  "x": {
-    "Identificador": "x",
->>>>>>> ef447c1687341bd5229e89acd9f555d377224d57
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "local",
-    "Direcci\u00f3n": "0x2C33EE966001A704",
+    "Direcci\u00f3n": "0xEA62466AE4AD815",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
     "Estado": "Usado (no declarado)",
@@ -21,7 +16,7 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "INT",
     "\u00c1mbito": "global",
-    "Direcci\u00f3n": "0xAD3E326F0E16B57",
+    "Direcci\u00f3n": "0x471721FDB15A59B1",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
     "Estado": "Usado (no declarado)",
@@ -33,23 +28,35 @@
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "INT",
     "\u00c1mbito": "global",
-    "Direcci\u00f3n": "0x46DF77D17E4D658D",
+    "Direcci\u00f3n": "0x5B0352DDAB1E8632",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
     "Estado": "Usado (no declarado)",
     "Estructura": "Variable simple",
     "Uso": "2"
-<<<<<<< HEAD
-=======
-=======
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x2A4BFBF17F5FDC1B",
-    "L\u00ednea": "3",
+  },
+  "saludar": {
+    "Identificador": "saludar",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "local",
+    "Direcci\u00f3n": "0x5036596AD754758B",
+    "L\u00ednea": "5",
     "Valor": "No inicializado",
-    "Estado": "Usado (sin declarar)",
-    "Estructura": "N/A",
-    "Uso": 1
->>>>>>> dd3c43b711c1fb88816a22590d8f72e5297ba662
->>>>>>> ef447c1687341bd5229e89acd9f555d377224d57
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": "5"
+  },
+  "nombre": {
+    "Identificador": "nombre",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "variable",
+    "\u00c1mbito": "local",
+    "Direcci\u00f3n": "0x33445FE9EE40C9B5",
+    "L\u00ednea": "6",
+    "Valor": "No inicializado",
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": "5, 6"
   }
 }

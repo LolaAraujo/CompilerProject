@@ -597,17 +597,21 @@ def show_identificators():
     identificator_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Valor"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Tipo", "Ambito", "Linea", "Estado", "Referencias"]
+    header_format = "{:<20} {:<15} {:<20} {:<20} {:<25} {:<25}\n".format(*headers)
     identificator_popup.insert("end", header_format)
-    identificator_popup.insert("end", "-" * 55 + "\n")
+    identificator_popup.insert("end", "-" * 70 + "\n")
     
     for identifier, symbol in symbol_table_instance.get_all_symbols().items():
         if symbol.get("Categoría") == "IDENTIFICADOR":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
+            row_format = "{:<20} {:<15} {:<20} {:<20} {:<15} {:<25} {:<25}\n".format(
                 identifier[:20],
                 symbol.get("Tipo", "")[:15],
-                symbol.get("Valor", "")[:20]
+                symbol.get("Ámbito", "")[:20],
+                symbol.get("Línea", "")[:20],
+                symbol.get("Estado", "")[:25],
+                symbol.get("Referencias", "")[:25],
+                
             )
             identificator_popup.insert("end", row_format)
 
@@ -631,18 +635,19 @@ def show_variables():
     variable_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Valor", "Estado"]
-    header_format = "{:<20} {:<15} {:<20} {:<10}\n".format(*headers)
+    headers = ["Identificador", "Tamaño", "Dirección Relativa", "Atributos Constante", "Modificabilidad"]
+    header_format = "{:<20} {:<15} {:<20} {:<25} {:<25}\n".format(*headers)
     variable_popup.insert("end", header_format)
     variable_popup.insert("end", "-" * 70 + "\n")
     
     for identifier, symbol in symbol_table_instance.get_all_symbols().items():
         if symbol.get("Categoría") == "VARIABLE":
-            row_format = "{:<20} {:<15} {:<20} {:<10}\n".format(
+            row_format = "{:<20} {:<15} {:<20} {:<25} {:<25}\n".format(
                 identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Valor", "")[:20],
-                symbol.get("Estado", "")[:10]
+                symbol.get("Tamaño", "")[:15],
+                symbol.get("Dirección Relativa", "")[:20],
+                symbol.get("Atributos Constante", "")[:25],
+                symbol.get("Modificabilidad", "")[:25]
             )
             variable_popup.insert("end", row_format)
 
@@ -666,17 +671,20 @@ def show_functions():
     function_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Parámetros"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Firma", "Parámetros", "Tipo de Retorno", "Variables Locales", "Estado Implementación"]
+    header_format = "{:<20} {:<20} {:<20} {:<20} {:<20} {:<20}\n".format(*headers)
     function_popup.insert("end", header_format)
     function_popup.insert("end", "-" * 55 + "\n")
     
     for identifier, symbol in symbol_table_instance.get_all_symbols().items():
         if symbol.get("Categoría") == "FUNCIÓN":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
+            row_format = "{:<20} {:<20} {:<20} {:<20} {:<20} {:<20}\n".format(
                 identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Parámetros", "")[:20]
+                symbol.get("Firma", "")[:20],
+                symbol.get("Parámetros", "")[:20],
+                symbol.get("Tipo de Retorno", "")[:20],
+                symbol.get("Variables Locales", "")[:20],
+                symbol.get("Estado Implementación", "")[:20]
             )
             function_popup.insert("end", row_format)
 
@@ -700,17 +708,19 @@ def show_definitionsUsers():
     structure_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Campos"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Estructura Interna", "Metodos Asociados", "Herencia", "Restricciones"]
+    header_format = "{:<20} {:<25} {:<25} {:<25} {:<25}\n".format(*headers)
     structure_popup.insert("end", header_format)
     structure_popup.insert("end", "-" * 55 + "\n")
     
     for identifier, symbol in symbol_table_instance.get_all_symbols().items():
         if symbol.get("Categoría") == "ESTRUCTURA":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
+            row_format = "{:<20} {:<25} {:<25} {:<25} {:<25}\n".format(
                 identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Campos", "")[:20]
+                symbol.get("Estructura Interna", "")[:25],
+                symbol.get("Metodos Asociados", "")[:25],
+                symbol.get("Herencia", "")[:25],
+                symbol.get("Restricciones", "")[:25]
             )
             structure_popup.insert("end", row_format)
 
