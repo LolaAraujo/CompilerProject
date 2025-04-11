@@ -1,12 +1,10 @@
-<<<<<<< HEAD
-=======
 {
-  "true": {
-    "Identificador": "true",
+  "x": {
+    "Identificador": "x",
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
     "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x456985FD5B49C7A8",
+    "Direcci\u00f3n": "0x2A4BFBF17F5FDC1B",
     "L\u00ednea": "3",
     "Valor": "No inicializado",
     "Estado": "Usado (sin declarar)",
@@ -14,4 +12,3 @@
     "Uso": 1
   }
 }
->>>>>>> 0456fd64fdaec5f50b06a54fd9c49078a29d8c6e

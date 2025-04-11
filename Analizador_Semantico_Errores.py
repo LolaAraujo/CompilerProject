@@ -1,3 +1,5 @@
+from CODIGO_Ordenado import error_manager 
+
 class TablaSimbolos:
     def __init__(self):
         self.ambitos = [{}]
