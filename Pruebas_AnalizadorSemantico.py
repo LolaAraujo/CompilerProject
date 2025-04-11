@@ -1,9 +1,8 @@
-# Analizador Sintáctico con Interfaz Gráfica para Compiladores
-# Equipo:
+# Autores:
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
 # Fernando de Jesus Rivera Reos
-# Update: 27/03/2025
+# Update: 10/04/2025
 
 import tkinter as tk
 from tkinter import *
@@ -11,10 +10,11 @@ from PIL import Image, ImageTk
 from lark import Lark
 from lark.exceptions import UnexpectedInput
 import re
+from tkinter import Toplevel
 from tkinter import messagebox
 import sys
 import json
-from lark.tree import pydot__tree_to_png  # Para exportar el árbol a PNG
+from lark.tree import pydot__tree_to_png
 from collections import defaultdict
 
 # Ejemplo de código para analizar
@@ -22,7 +22,10 @@ from collections import defaultdict
 #     return a + b;
 # }
 
-tokens_list =[]
+# Variable global para almacenar tokens
+tokens_list = []
+
+#==================== MANEJO DE ERRORES ====================
 
 class ErrorManager:
     def __init__(self):
@@ -55,10 +58,45 @@ class ErrorManager:
     def get_all_errors_formatted(self):
         return "\n".join([self.format_error(e) for e in self.errors])
 
-# Crear una instancia global del manejador de errores
+# Instancia global del manejador de errores
 error_manager = ErrorManager()
 
+#==================== TABLA DE SÍMBOLOS ====================
 
+class SymbolTracker:
+    def __init__(self):
+        self.declarations = {}  # {name: {line, type, scope}}
+        self.usages = defaultdict(list)  # {name: [line1, line2,...]}
+        self.current_scope = "global"
+    
+    def add_declaration(self, name, line, symbol_type):
+        if name not in self.declarations:
+            self.declarations[name] = {
+                "line": line,
+                "type": symbol_type,
+                "scope": self.current_scope
+            }
+    
+    def add_usage(self, name, line):
+        self.usages[name].append(line)
+    
+    def enter_scope(self):
+        self.current_scope = "local"
+    
+    def exit_scope(self):
+        self.current_scope = "global"
+    
+    def get_declaration_line(self, name):
+        return self.declarations.get(name, {}).get("line", None)
+    
+    def get_usage_lines(self, name):
+        return self.usages.get(name, [])
+    
+    def get_symbol_type(self, name):
+        return self.declarations.get(name, {}).get("type", None)
+    
+    def get_symbol_scope(self, name):
+        return self.declarations.get(name, {}).get("scope", "local")
 
 class SymbolTable:
     def __init__(self, max_memory_size=100):
@@ -310,7 +348,16 @@ class SymbolTable:
         # Clear secondary storage file
         open(self.secondary_storage_path, 'w').close()
 
-# Modify the existing show_symbol_table function
+# Instancia global de la tabla de símbolos
+symbol_table_instance = SymbolTable()
+
+
+# ==================== ANALIZADOR SEMANTICO  ====================
+
+
+
+# ==================== VISUALIZACIONES ====================
+
 def show_symbol_table(tracker=None):
     """Creates a pop-up window for the symbol table"""
     global tokens_list, symbol_table_instance
@@ -356,18 +403,6 @@ def show_symbol_table(tracker=None):
             else:
                 category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
             
-            # symbol_details = {
-            #     "Identificador": identifier,
-            #     "Categoría": category,
-            #     "Tipo": symbol_table_instance.infer_type(token_type, identifier, tracker),
-            #     "Ámbito": symbol_scope,
-            #     "Dirección": f"0x{abs(hash(identifier)):08X}",
-            #     "Línea": str(decl_line),
-            #     "Valor": symbol_table_instance.get_value(identifier, None, token_type),  # Pasamos token_type
-            #     "Estado": symbol_table_instance.determine_state(identifier),
-            #     "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
-            #     "Uso": ", ".join(map(str, usage_lines)),
-            # }
             symbol_details = {
                 "Identificador": identifier,
                 "Categoría": category,
@@ -404,8 +439,6 @@ def show_symbol_table(tracker=None):
             continue
 
     symbol_table_popup.config(state="disabled")
-
-symbol_table_instance = SymbolTable()
 
 def show_ats_tree():
     global parser
@@ -546,6 +579,144 @@ def show_ats_tree():
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
 
+def show_identificators():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay identificadores para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Identificadores")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Identificadores", font=("Arial", 11))
+    label.pack()
+
+    identificator_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    identificator_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Valor"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    identificator_popup.insert("end", header_format)
+    identificator_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "IDENTIFICADOR":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Valor", "")[:20]
+            )
+            identificator_popup.insert("end", row_format)
+
+    identificator_popup.config(state="disabled")
+    
+def show_variables():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay variables para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Variables")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Variables", font=("Arial", 11))
+    label.pack()
+
+    variable_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    variable_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Valor", "Estado"]
+    header_format = "{:<20} {:<15} {:<20} {:<10}\n".format(*headers)
+    variable_popup.insert("end", header_format)
+    variable_popup.insert("end", "-" * 70 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "VARIABLE":
+            row_format = "{:<20} {:<15} {:<20} {:<10}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Valor", "")[:20],
+                symbol.get("Estado", "")[:10]
+            )
+            variable_popup.insert("end", row_format)
+
+    variable_popup.config(state="disabled")
+
+def show_functions():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay funciones para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Funciones")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Funciones", font=("Arial", 11))
+    label.pack()
+
+    function_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    function_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Parámetros"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    function_popup.insert("end", header_format)
+    function_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "FUNCIÓN":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Parámetros", "")[:20]
+            )
+            function_popup.insert("end", row_format)
+
+    function_popup.config(state="disabled")
+
+def show_definitionsUsers():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay estructuras para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Estructuras")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Estructuras", font=("Arial", 11))
+    label.pack()
+
+    structure_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    structure_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Campos"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    structure_popup.insert("end", header_format)
+    structure_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "ESTRUCTURA":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Campos", "")[:20]
+            )
+            structure_popup.insert("end", row_format)
+
+    structure_popup.config(state="disabled")
+
+#==================== DEFINICIÓN DE TOKENS ====================
 
 TOKENS_GRAMATICA = {
     "INT": "ENTERO",
@@ -611,11 +782,8 @@ TOKENS_GRAMATICA = {
     "__ANON_6": "NUMERO",
 }
 
-# ----- CONFIGURACIÓN DE LA INTERFAZ -----
-root = tk.Tk()
-root.title("Analizador Léxico")
-root.geometry("1000x800")
-# Función para actualizar los números de línea
+# ==================== FUNCIONES DE ANÁLISIS ====================
+
 def update_line_numbers(event=None):
     line_numbers.config(state="normal")
     line_numbers.delete(1.0, "end")  # Borrar los números anteriores
@@ -750,7 +918,7 @@ def mostrar_advertencias(tokens):
                 warnings.append(f"Identificador con mezcla de mayúsculas/minúsculas: '{ident}'")
     
     if warnings:
-        console_output.insert("end", "\n⚠️ ADVERTENCIAS:\n")
+        console_output.insert("end", "\n ADVERTENCIAS:\n")
         for warn in warnings:
             console_output.insert("end", f"• {warn}\n")
 
@@ -767,7 +935,6 @@ def obtener_contexto(codigo, linea):
     
     return "\n".join(contexto)
 
-# Modificar show_compiling_complete
 def show_compiling_complete(tokens, code):
     console_output.delete("1.0", "end")
     global tokens_list
@@ -786,8 +953,35 @@ def show_compiling_complete(tokens, code):
         else:
             console_output.insert("end", "No se encontraron errores.\n")
 
+def es_error(resultado):
+    return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
+
+def obtener_lista_tokens(codigo):
+    try:
+        tokens = list(parser.lex(codigo))
+        resultado = []
+        
+        for token in tokens:
+            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
+            # Usar token.line para el número de línea real
+            resultado.append(f"{token.line}: {tipo_token}: {token.value}")
+            
+            # Manejo especial para tokens complejos
+            if token.type == "ERROR":
+                handle_lexical_error(token)
+                
+        return resultado
+        
+    except UnexpectedInput as e:
+        handle_syntax_error(e, codigo)
+
+#==================== CONFIGURACIÓN DE INTERFAZ ====================
+root = tk.Tk()
+root.title("Analizador Léxico")
+root.geometry("1000x800")
 # ------- FRAMES -------
 # FRAMA PARA ICONOS
+
 frame_superior = tk.Frame(root, bg="lightgray", height=50, bd=2, relief="sunken")
 frame_superior.pack(fill="x")
 
@@ -813,6 +1007,14 @@ symbol_table_button = tk.Button(frame_superior, text="Tabla de Simbolos", comman
 symbol_table_button.pack(side="right", padx=10, pady=5)
 ats_buttun = tk.Button(frame_superior, text="ATS", command=show_ats_tree)
 ats_buttun.pack(side="right", padx=10, pady=5)
+identificator_button = tk.Button(frame_superior, text="Identificadores", command=show_identificators)
+identificator_button.pack(side="right", padx=10, pady=5)
+variables_button = tk.Button(frame_superior, text="Variables", command=show_variables)
+variables_button.pack(side="right", padx=10, pady=5)
+functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=show_functions)
+functions_button.pack(side="right", padx=10, pady=5)
+definitionUsers_button = tk.Button(frame_superior, text="Definiciones por Usuario", command=show_definitionsUsers)
+definitionUsers_button.pack(side="right", padx=10, pady=5)
 
 # Canvas para los números de línea
 line_numbers = tk.Text(frame_izq, width=2, bg="lightgray", fg="black", font=("Consolas", 12), padx=5, state="disabled", wrap="none")
@@ -841,14 +1043,14 @@ error_scrollbar = tk.Scrollbar(frame_inferior, orient="vertical" ,command=consol
 error_scrollbar.pack(side="right", fill="y")
 console_output.config(yscrollcommand=error_scrollbar.set)
 
-with open("Gramatica.ebnf", "r") as file:
-    grammar = file.read()
-    
+
+
+# ==================== MANEJO DE GRAMÁTICA ====================
+
 def load_grammar(file_path):
     try:
         with open(file_path, "r") as file:
             grammar = file.read()
-        # Validación básica
         if not grammar.strip():
             raise ValueError("El archivo de gramática está vacío")
         return grammar
@@ -859,41 +1061,15 @@ def load_grammar(file_path):
         messagebox.showerror("Error", f"Error al cargar gramática: {str(e)}")
         sys.exit(1)
 
+# Cargar y validar gramática
 grammar = load_grammar("Gramatica.ebnf")
 
-# Crear el parser con Lark
 try:
     parser = Lark(grammar, parser="lalr", start="start")
     print("✅ La gramática es válida y compatible con Lark")
-
 except Exception as e:
     print("❌ Error en la gramática:", e)
     exit()
-
-def es_error(resultado):
-    return resultado and isinstance(resultado, list) and resultado[0].startswith("Error ")
-
-# Función para obtener lista de tokens
-# Modificar la función obtener_lista_tokens
-def obtener_lista_tokens(codigo):
-    try:
-        tokens = list(parser.lex(codigo))
-        resultado = []
-        
-        for token in tokens:
-            tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
-            # Usar token.line para el número de línea real
-            resultado.append(f"{token.line}: {tipo_token}: {token.value}")
-            
-            # Manejo especial para tokens complejos
-            if token.type == "ERROR":
-                handle_lexical_error(token)
-                
-        return resultado
-        
-    except UnexpectedInput as e:
-        handle_syntax_error(e, codigo)
-   
 
 update_line_numbers()
 
