@@ -1,8 +1,9 @@
 {
-  "suma": {
-    "Identificador": "suma",
+  "true": {
+    "Identificador": "true",
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "variable",
+<<<<<<< HEAD
     "\u00c1mbito": "local",
     "Direcci\u00f3n": "0xE828D65A6D4411",
     "L\u00ednea": "1",
@@ -34,5 +35,14 @@
     "Estado": "Usado (no declarado)",
     "Estructura": "Variable simple",
     "Uso": "2"
+=======
+    "\u00c1mbito": "Local",
+    "Direcci\u00f3n": "0x456985FD5B49C7A8",
+    "L\u00ednea": "3",
+    "Valor": "No inicializado",
+    "Estado": "Usado (sin declarar)",
+    "Estructura": "N/A",
+    "Uso": 1
+>>>>>>> dd3c43b711c1fb88816a22590d8f72e5297ba662
   }
 }

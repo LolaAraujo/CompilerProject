@@ -348,9 +348,13 @@ class SymbolTable:
         # Clear secondary storage file
         open(self.secondary_storage_path, 'w').close()
 
-
 # Instancia global de la tabla de símbolos
 symbol_table_instance = SymbolTable()
+
+
+# ==================== ANALIZADOR SEMANTICO  ====================
+
+
 
 # ==================== VISUALIZACIONES ====================
 
