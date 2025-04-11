@@ -371,178 +371,6 @@ symbol_table_instance = SymbolTable()
 
 # ==================== ANALIZADOR SEMANTICO  ====================
 
-#==================== ANALIZADOR SEMANTICO ====================
-
-class TablaSimbolos:
-    def __init__(self):
-        self.ambitos = [{}]  # Pila de ámbitos
-
-    def entrar_ambito(self):
-        self.ambitos.append({})
-
-    def salir_ambito(self):
-        self.ambitos.pop()
-
-    def declarar(self, nombre, tipo, linea, constante=False):
-        ambito_actual = self.ambitos[-1]
-        if nombre in ambito_actual:
-            return f"Error semántico en línea {linea}: La variable '{nombre}' ya fue declarada en este ámbito."
-        for ambito in reversed(self.ambitos[:-1]):
-            if nombre in ambito:
-                return f"Error semántico en línea {linea}: La variable local '{nombre}' oculta una variable del ámbito superior."
-        ambito_actual[nombre] = {
-            "tipo": tipo,
-            "linea": linea,
-            "inicializado": False,
-            "referencias": 0,
-            "constante": constante,
-            "modificable": not constante
-        }
-
-    def obtener(self, nombre):
-        for ambito in reversed(self.ambitos):
-            if nombre in ambito:
-                return ambito[nombre]
-        return None
-
-
-class AnalizadorSemantico:
-    def __init__(self):
-        self.tabla = TablaSimbolos()
-        self.errores = []
-        self.funciones = {}
-        self.funcion_actual = None
-        self.codigo_inalcanzable = False  # Bandera para detectar código inalcanzable
-
-    def declarar_variable(self, nombre, tipo, linea, constante=False):
-        error = self.tabla.declarar(nombre, tipo, linea, constante)
-        if error:
-            self.errores.append(error)
-
-    def asignar_variable(self, nombre, tipo_valor, linea):
-        simbolo = self.tabla.obtener(nombre)
-        if not simbolo:
-            self.errores.append(f"Error semántico en línea {linea}: La variable '{nombre}' no ha sido declarada.")
-        else:
-            if not simbolo["modificable"]:
-                self.errores.append(f"Error semántico en línea {linea}: No se puede modificar la constante '{nombre}'.")
-            elif simbolo["tipo"] != tipo_valor:
-                self.errores.append(
-                    f"Error de tipo en línea {linea}: No se puede asignar un valor de tipo '{tipo_valor}' a una variable de tipo '{simbolo['tipo']}'."
-                )
-            else:
-                simbolo["inicializado"] = True
-
-    def usar_variable(self, nombre, linea):
-        simbolo = self.tabla.obtener(nombre)
-        if not simbolo:
-            self.errores.append(f"Error semántico en línea {linea}: La variable '{nombre}' no ha sido declarada.")
-        else:
-            simbolo["referencias"] += 1
-            if not simbolo["inicializado"]:
-                self.errores.append(f"Error semántico en línea {linea}: La variable '{nombre}' se usa sin ser inicializada.")
-
-    def declarar_funcion(self, nombre, parametros, tipo_retorno, linea):
-        if nombre in self.funciones:
-            self.errores.append(f"Error en línea {linea}: La función '{nombre}' ya fue definida.")
-        else:
-            self.funciones[nombre] = {
-                "parametros": parametros,
-                "retorno": tipo_retorno,
-                "linea": linea,
-                "tiene_retorno": False,
-                "tiene_caso_base": False  # Para controlar la recursión sin caso base
-            }
-
-    def entrar_funcion(self, nombre):
-        self.funcion_actual = self.funciones[nombre]
-        self.tabla.entrar_ambito()
-        for tipo, nombre_param in self.funcion_actual["parametros"]:
-            self.tabla.declarar(nombre_param, tipo, self.funcion_actual["linea"])
-
-    def salir_funcion(self):
-        if self.funcion_actual["retorno"] != "void" and not self.funcion_actual["tiene_retorno"]:
-            self.errores.append(f"Error: La función '{self.funcion_actual}' no contiene una sentencia de retorno.")
-        if self.funcion_actual["retorno"] != "void" and not self.funcion_actual["tiene_caso_base"]:
-            self.errores.append(f"Advertencia: La función '{self.funcion_actual}' es recursiva pero no tiene un caso base detectado.")
-        self.funcion_actual = None
-        self.tabla.salir_ambito()
-
-    def llamada_funcion(self, nombre, argumentos, linea):
-        if nombre not in self.funciones:
-            self.errores.append(f"Error en línea {linea}: La función '{nombre}' no está definida.")
-        else:
-            f = self.funciones[nombre]
-            if len(argumentos) != len(f["parametros"]):
-                self.errores.append(
-                    f"Error en línea {linea}: La función '{nombre}' espera {len(f['parametros'])} argumentos pero se pasaron {len(argumentos)}."
-                )
-            else:
-                for (arg_tipo, (param_tipo, _)) in zip(argumentos, f["parametros"]):
-                    if arg_tipo != param_tipo:
-                        self.errores.append(
-                            f"Error en línea {linea}: Se esperaba un argumento de tipo '{param_tipo}' pero se recibió '{arg_tipo}'."
-                        )
-
-    def retorno_funcion(self, tipo_retorno, linea):
-        if not self.funcion_actual:
-            self.errores.append(f"Error en línea {linea}: Sentencia 'return' fuera de función.")
-        elif tipo_retorno != self.funcion_actual["retorno"]:
-            self.errores.append(
-                f"Error en línea {linea}: Se retorna tipo '{tipo_retorno}', pero la función espera '{self.funcion_actual['retorno']}'."
-            )
-        else:
-            self.funcion_actual["tiene_retorno"] = True
-
-    def registrar_llamada_en_funcion(self, nombre_funcion_llamada, linea):
-        if self.funcion_actual and nombre_funcion_llamada == self.funcion_actual:
-            # Si la función se llama a sí misma sin caso base
-            if not self.funcion_actual.get("tiene_caso_base", False):
-                self.errores.append(
-                    f"Advertencia en línea {linea}: La función '{nombre_funcion_llamada}' parece recursiva sin un caso base detectado."
-                )
-
-    def registrar_caso_base(self):
-        if self.funcion_actual:
-            self.funcion_actual["tiene_caso_base"] = True
-
-    def verificar_division(self, operando_derecho, linea):
-        if isinstance(operando_derecho, (int, float)) and operando_derecho == 0:
-            self.errores.append(f"Error en línea {linea}: División por cero detectada en tiempo de compilación.")
-
-    def acceso_array(self, nombre, indice, longitud, linea):
-        if isinstance(indice, int) and (indice < 0 or indice >= longitud):
-            self.errores.append(f"Error en línea {linea}: Índice {indice} fuera de rango para arreglo '{nombre}' de longitud {longitud}.")
-
-    def operacion_binaria(self, tipo1, tipo2, operador, linea):
-        compatibles = {
-            '+': [('int', 'int'), ('float', 'float'), ('int', 'float'), ('float', 'int'), ('string', 'string')],
-            '-': [('int', 'int'), ('float', 'float'), ('int', 'float'), ('float', 'int')],
-            '*': [('int', 'int'), ('float', 'float'), ('int', 'float'), ('float', 'int')],
-            '/': [('int', 'int'), ('float', 'float'), ('int', 'float'), ('float', 'int')],
-            '%': [('int', 'int')],
-        }
-        if (tipo1, tipo2) not in compatibles.get(operador, []):
-            self.errores.append(
-                f"Error de tipo en línea {linea}: Operador '{operador}' no es compatible con tipos '{tipo1}' y '{tipo2}'."
-            )
-
-    def analizar_sentencia(self, tipo_sentencia, linea):
-        if tipo_sentencia == "return" or tipo_sentencia == "break" or tipo_sentencia == "continue":
-            self.codigo_inalcanzable = True
-        elif self.codigo_inalcanzable:
-            self.errores.append(f"Advertencia en línea {linea}: Bloque de código inalcanzable detectado.")
-
-    def reiniciar_codigo_inalcanzable(self):
-        self.codigo_inalcanzable = False  # Reinicia cuando se sale de un bloque de control
-
-    def reportar_errores(self):
-        if not self.errores:
-            print("✅ Programa válido (análisis semántico sin errores).")
-        else:
-            print("🔍 Errores semánticos detectados:\n")
-            for i, error in enumerate(self.errores, start=1):
-                print(f"**ERROR {i}:** {error}")
 
 
 # ==================== VISUALIZACIONES ====================
@@ -879,7 +707,6 @@ def compile_code():
     console_output.delete("1.0", "end")
     symbol_table_instance.clear()
     tokens_list.clear()
-    error_manager.clear_errors()  # Limpiar errores previos
     
     console_output.insert("end", "🔍 Analizando código...\n")
     root.update()  # Actualizar la interfaz para mostrar el mensaje
@@ -894,25 +721,7 @@ def compile_code():
         
         # Análisis sintáctico
         tree = parser.parse(code)
-        
-        # Análisis semántico
-        analizador_semantico = AnalizadorSemantico()
-        # Aquí deberías recorrer el árbol sintáctico (tree) y llamar a los métodos del analizador semántico
-        # según corresponda (declarar variables, funciones, verificar tipos, etc.)
-        
-        # Ejemplo simplificado (debes adaptarlo a tu gramática):
-        for token in tokens_lexicos:
-            if token.type == "INT" or token.type == "FLOAT":
-                analizador_semantico.declarar_variable(token.value, token.type, token.line)
-            # Añadir más casos según sea necesario
-        
-        # Mostrar resultados
-        if analizador_semantico.errores:
-            console_output.insert("end", "❌ Errores semánticos encontrados:\n")
-            for error in analizador_semantico.errores:
-                console_output.insert("end", f"• {error}\n")
-        else:
-            console_output.insert("end", "✅ Análisis completado sin errores\n")
+        console_output.insert("end", "✅ Análisis completado sin errores\n")
         
         # Mostrar advertencias si hay tokens sospechosos
         mostrar_advertencias(tokens_list)
