@@ -2,7 +2,7 @@
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
 # Fernando de Jesus Rivera Reos
-# Update: 27/03/2025
+# Update: 10/04/2025
 
 import tkinter as tk
 from tkinter import *
@@ -15,6 +15,7 @@ from tkinter import messagebox
 import sys
 import json
 from lark.tree import pydot__tree_to_png
+from collections import defaultdict
 
 # Ejemplo de código para analizar
 # func suma(int a, int b) -> int {
@@ -61,6 +62,41 @@ class ErrorManager:
 error_manager = ErrorManager()
 
 #==================== TABLA DE SÍMBOLOS ====================
+
+class SymbolTracker:
+    def __init__(self):
+        self.declarations = {}  # {name: {line, type, scope}}
+        self.usages = defaultdict(list)  # {name: [line1, line2,...]}
+        self.current_scope = "global"
+    
+    def add_declaration(self, name, line, symbol_type):
+        if name not in self.declarations:
+            self.declarations[name] = {
+                "line": line,
+                "type": symbol_type,
+                "scope": self.current_scope
+            }
+    
+    def add_usage(self, name, line):
+        self.usages[name].append(line)
+    
+    def enter_scope(self):
+        self.current_scope = "local"
+    
+    def exit_scope(self):
+        self.current_scope = "global"
+    
+    def get_declaration_line(self, name):
+        return self.declarations.get(name, {}).get("line", None)
+    
+    def get_usage_lines(self, name):
+        return self.usages.get(name, [])
+    
+    def get_symbol_type(self, name):
+        return self.declarations.get(name, {}).get("type", None)
+    
+    def get_symbol_scope(self, name):
+        return self.declarations.get(name, {}).get("scope", "local")
 
 class SymbolTable:
     def __init__(self, max_memory_size=100):
@@ -181,25 +217,17 @@ class SymbolTable:
         return all_symbols
     
     # Funciones locales para inferir tipo y valor
-    def infer_type(self, token_type,identifier):
+    def infer_type(self, token_type, identifier, tracker=None):        
         cache_key = f"{token_type}_{identifier}"
         if cache_key in self.type_cache:
             return self.type_cache[cache_key]
-        # Obtenemos la categoría del token
-        token_category = TOKENS_GRAMATICA.get(token_type, None)
         
-        # Asignación directa de tipos basada en tu gramática
-        if token_category in ["ENTERO", "NUMERO"]:
-            return "entero"
-        elif token_category in ["FLOTANTE", "NUMERO FLOTANTE"]:
-            return "real"
-        elif token_category == "BOOLEANO":
-            return "booleano"
-        elif token_category in ["CARACTER", "CADENA"]:
-            return "cadena"
-        elif token_category == "ARREGLO":
-            return "arreglo"
-        # Para identificadores (variables/funciones)
+        # Usar información del tracker si está disponible
+        if tracker and tracker.get_symbol_type(identifier):
+            return tracker.get_symbol_type(identifier)
+        
+        
+        # # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
             if identifier in ["void", "read", "func", "main"]:
@@ -225,136 +253,91 @@ class SymbolTable:
         return inferred_type
     
     def get_value(self, identifier, token_value=None, token_type=None):
-        """Obtiene el valor inicial si está disponible"""
-        # Si ya tenemos un valor explícito
-        if token_value:
-            # Para tipos numéricos, formatear adecuadamente
-            if token_type in ["ENTERO", "NUMERO"]:
-                return str(int(token_value))
-            elif token_type in ["FLOTANTE", "NUMERO FLOTANTE"]:
-                return str(float(token_value))
-            # Para cadenas, mostrar con comillas
-            elif token_type in ["CADENA", "CARACTER"]:
-                return f'"{token_value}"'
-            # Para booleanos, normalizar
-            elif token_type == "BOOLEANO":
-                return token_value.lower()
-            return token_value
-        
-        # Buscar en los tokens si hay una asignación para este identificador
+        # Buscar en tokens_list asignaciones directas (x = 5)
         for token in tokens_list:
-            parts = token.split(": ")
-            if len(parts) == 3:
-                # Detectar patrones de asignación como "x = 5"
-                if "ASIGNACION" in parts[1] and f"{identifier} =" in parts[2]:
-                    # Extraer valor después del signo igual
-                    value_part = parts[2].split("=")[1].strip()
-                    return value_part
+            if f": ASIGNACION: {identifier} =" in token:
+                value_part = token.split("=")[1].split(":")[0].strip()
+                return value_part.replace(";", "") if ";" in value_part else value_part
+        
+        # Buscar inicializaciones en declaraciones (int x = 10)
+        for token in tokens_list:
+            if ((": INT: " in token or ": FLOAT: " in token or 
+                ": BOOL: " in token or ": CHAR: " in token or 
+                ": STRING: " in token) and 
+                f"{identifier} =" in token):
+                return token.split("=")[1].split(":")[0].strip().replace(";", "")
+        
+        # Para arreglos
+        if any(f": ARRAY: {identifier}" in t for t in tokens_list):
+            for token in tokens_list:
+                if f": ARRAY: {identifier}" in token and "[" in token:
+                    size = token.split("[")[1].split("]")[0]
+                    return f"array[{size}]"
         
         return "No inicializado"
     
     def determine_state(self, identifier):
-        """Determina el estado de un identificador basado en su uso en el código"""
-        declared = False
-        initialized = False
-        used = False
+        declared = any(
+        (f": INT: {identifier}" in token or 
+         f": FLOAT: {identifier}" in token or
+         f": BOOL: {identifier}" in token or
+         f": CHAR: {identifier}" in token or
+         f": STRING: {identifier}" in token)
+        for token in tokens_list
+        )
         
-        for token in tokens_list:
-            parts = token.split(": ")
-            if len(parts) == 3:
-                line_number, token_type, token_value = parts
-                
-                # Detectar declaraciones (int x, float y, etc.)
-                if token_value == identifier and any(
-                    t for t in tokens_list if t.split(": ")[2].startswith(f"{identifier} :") 
-                    or ("DECLARACION" in t and identifier in t)
-                ):
-                    declared = True
-                
-                # Detectar inicializaciones (x = 5, etc.)
-                if "ASIGNACION" in token_type and token_value.startswith(f"{identifier} ="):
-                    initialized = True
-                
-                # Detectar usos (en expresiones, llamadas, etc.)
-                if token_value == identifier and token_type == "IDENTIFICADOR":
-                    used = True
+        initialized = any(
+            f"{identifier} =" in token 
+            for token in tokens_list
+        )
         
-        # Determinar estado final
-        if declared and initialized and used:
-            return "Declarado, Inicializado, Usado"
-        elif declared and initialized:
-            return "Declarado, Inicializado"
+        used = any(
+            f": IDENTIFICADOR: {identifier}" in token 
+            for token in tokens_list
+        ) and not any(
+            f": FUNCION: {identifier}" in token 
+            for token in tokens_list
+        )
+        
+        if not declared and used:
+            return "Usado (no declarado)"
+        elif declared and not initialized and not used:
+            return "Declarado"
+        elif declared and initialized and not used:
+            return "Declarado e inicializado"
         elif declared and used:
-            return "Declarado, Usado"
-        elif declared:
-            return "Solo Declarado"
-        elif used:
-            return "Usado (sin declarar)"
+            return "Completo (decl+init+uso)"
         else:
-            return "Desconocido"
+            return "No usado"
         
     def get_structure_info(self, identifier, token_type=None):
-        """Obtiene información de estructura para arreglos o tipos compuestos"""
-        # Para arreglos
-        if token_type == "ARREGLO":
-            # Buscar declaraciones de arreglo
-            for token in tokens_list:
-                if ": ARREGLO: " in token and identifier in token:
-                    # Intentar extraer dimensiones
-                    try:
-                        dimensions = re.findall(r'\[(\d+)\]', token)
-                        if dimensions:
-                            return f"Arreglo {len(dimensions)}D: [{' × '.join(dimensions)}]"
-                    except:
-                        pass
-            return "Arreglo"
+        # Para funciones
+        for token in tokens_list:
+            if f": FUNCION: {identifier}" in token:
+                params = []
+                if "(" in token and ")" in token:
+                    params_part = token.split("(")[1].split(")")[0]
+                    params = [p.split(":")[0].strip() for p in params_part.split(",") if p.strip()]
+                return f"Función({len(params)} params)"
         
-        # Para estructuras/registros
-        elif token_type == "STRUCT":
-            # Buscar campos de estructura
-            struct_def = None
-            for i, token in enumerate(tokens_list):
-                if ": STRUCT: " in token and identifier in token:
-                    struct_def = i
-                    break
-            
-            if struct_def is not None:
-                # Buscar campos entre llaves
-                fields = []
-                brace_level = 0
-                for i in range(struct_def, len(tokens_list)):
-                    token = tokens_list[i]
-                    if ": LLAVE INICIO: " in token:
-                        brace_level += 1
-                    elif ": LLAVE CIERRE: " in token:
-                        brace_level -= 1
-                        if brace_level == 0:
-                            break
-                    elif brace_level > 0 and ": IDENTIFICADOR: " in token:
-                        fields.append(token.split(": ")[2])
-                
-                if fields:
-                    return f"Struct con {len(fields)} campos"
-            
+        # Para arreglos
+        for token in tokens_list:
+            if f": ARRAY: {identifier}" in token and "[" in token:
+                size = token.split("[")[1].split("]")[0]
+                return f"Array[{size}]"
+        
+        # Para estructuras
+        if any(f": STRUCT: {identifier}" in t for t in tokens_list):
+            fields = []
+            for token in tokens_list:
+                if f": STRUCT_FIELD: {identifier}." in token:
+                    field = token.split(".")[1].split(":")[0]
+                    fields.append(field)
+            if fields:
+                return f"Struct({', '.join(fields)})"
             return "Struct"
         
-        # Para funciones
-        elif identifier in ["main", "print", "void", "read", "func"] or token_type == "FUNCIÓN":
-            # Buscar parámetros y tipo de retorno
-            for token in tokens_list:
-                if f": {identifier}(" in token or f": {identifier} (" in token:
-                    params = re.search(r'\((.*?)\)', token.split(": ")[2])
-                    return_type = re.search(r'-> (.*?)($|\s|{)', token.split(": ")[2])
-                    
-                    params_str = params.group(1) if params else ""
-                    return_str = return_type.group(1) if return_type else "void"
-                    
-                    param_count = len(params_str.split(",")) if params_str.strip() else 0
-                    return f"Función: {param_count} param(s) -> {return_str}"
-            
-            return "Función"
-        
-        return "N/A"
+        return "Variable simple"
 
     def clear(self):
         """
@@ -375,7 +358,7 @@ symbol_table_instance = SymbolTable()
 
 # ==================== VISUALIZACIONES ====================
 
-def show_symbol_table():
+def show_symbol_table(tracker=None):
     """Creates a pop-up window for the symbol table"""
     global tokens_list, symbol_table_instance
 
@@ -385,7 +368,7 @@ def show_symbol_table():
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Tabla de Símbolos")
-    pop_up.geometry("1090x550")
+    pop_up.geometry("1300x600")
 
 
     label = tk.Label(pop_up, text="Tabla de Símbolos", font=("Arial", 11))
@@ -396,75 +379,58 @@ def show_symbol_table():
 
     # Headers
     headers = ["Identificador", "Categoría", "Tipo", "Ámbito", "Dirección" ,"Línea", "Valor","Estado", "Estructura", "Uso"]
-    header_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:20} {:20} {:15} {:10}\n".format(*headers)
+    header_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<12} {:20} {:20} {:20} {:10}\n".format(*headers)
     symbol_table_popup.insert("end", header_format)
     symbol_table_popup.insert("end", "-" * 170 + "\n")
     
-    print("Tokens List: ", tokens_list)
-    # Count the usage of each identifier
-    usage_count = {}
+   
     for token in tokens_list:
         parts = token.split(": ")
         if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
-            identifier = parts[2]
-            usage_count[identifier] = usage_count.get(identifier, 0) + 1
+            decl_line, token_type, identifier = parts
             
-    print("Usage Count: ", usage_count)
-
-    # Initialize a set to keep track of processed identifiers
-    processed_identifiers = set()
-    for token in tokens_list:
-        try:
-            parts = token.split(": ")
-            if len(parts) == 3:
-                line_number, token_type, identifier = parts[0], parts[1], parts[2]
+            # Usar información del tracker si está disponible
+            if tracker:
+                usage_lines = tracker.get_usage_lines(identifier)
+                symbol_scope = tracker.get_symbol_scope(identifier)
+                decl_line = tracker.get_declaration_line(identifier) or decl_line
+            else:
+                usage_lines = []
+                symbol_scope = "Global"
                 
-                # Solo procesamos identificadores no vistos
-                if token_type == "IDENTIFICADOR" and identifier not in processed_identifiers:
-                    
-                    # Determinar categoría basada en el token
-                    if identifier in ["main", "print", "void", "read", "func"]:
-                        category = "FUNCIÓN"
-                    else:
-                        category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
-                        
-                    # Detección básica de declaraciones (mejorable)
-                    is_declaration = any(
-                        t for t in tokens_list 
-                        if f"{identifier}:" in t and "DECLARACION" in t
-                    )
-                    
-                    symbol_details = {
-                        "Identificador": identifier,
-                        "Categoría": category,
-                        "Tipo": symbol_table_instance.infer_type(token_type, identifier),
-                        "Ámbito": "Global" if identifier == "global" else "Local",
-                        "Dirección": f"0x{abs(hash(identifier)):08X}",
-                        "Línea": line_number,
-                        "Valor": symbol_table_instance.get_value(identifier, None, token_type),  # Pasamos token_type
-                        "Estado": symbol_table_instance.determine_state(identifier),
-                        "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
-                        "Uso": usage_count.get(identifier, 1)
-                    }
-
-                    symbol_table_instance.add_symbol(identifier, symbol_details)
-        except Exception as e:
-            print(f"Error procesando token {token}: {str(e)}")
-            continue
+            if identifier in ["main", "print", "void", "read", "func"]:
+                category = "FUNCIÓN"
+            else:
+                category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
+            
+            symbol_details = {
+                "Identificador": identifier,
+                "Categoría": category,
+                "Tipo": symbol_table_instance.infer_type(token_type, identifier, tracker),
+                "Ámbito": symbol_scope,
+                "Dirección": f"0x{abs(hash(identifier)):08X}",
+                "Línea": str(decl_line),
+                "Valor": symbol_table_instance.get_value(identifier, None, token_type),
+                "Estado": symbol_table_instance.determine_state(identifier),
+                "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
+                "Uso": ", ".join(map(str, usage_lines)),
+            }
+            
+            symbol_table_instance.add_symbol(identifier, symbol_details)
    
     all_symbols = symbol_table_instance.get_all_symbols()
     for identifier, symbol in all_symbols.items():
         try: 
-            row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<10} {:20} {:20} {:15} {:10}\n".format(
+            row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<12} {:20} {:20} {:20} {:10}\n".format(
                 symbol.get("Identificador", "")[:20],
                 symbol.get("Categoría", "")[:20],
                 symbol.get("Tipo", "")[:15],
                 symbol.get("Ámbito", "")[:15],
-                symbol.get("Dirección", "0x0000")[:15],
-                symbol.get("Línea", "")[:10],
+                symbol.get("Dirección", "0x0000")[:18],
+                symbol.get("Línea", "")[:12],
                 symbol.get("Valor", "")[:20],
                 symbol.get("Estado", "")[:20],
-                symbol.get("Estructura", "")[:15],
+                symbol.get("Estructura", "")[:20],
                 str(symbol.get("Uso", 0))[:10]  # Aseguramos que sea string para el formato
             )
             symbol_table_popup.insert("end", row_format)
@@ -613,7 +579,142 @@ def show_ats_tree():
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
 
+def show_identificators():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay identificadores para mostrar.")
+        return
 
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Identificadores")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Identificadores", font=("Arial", 11))
+    label.pack()
+
+    identificator_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    identificator_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Valor"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    identificator_popup.insert("end", header_format)
+    identificator_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "IDENTIFICADOR":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Valor", "")[:20]
+            )
+            identificator_popup.insert("end", row_format)
+
+    identificator_popup.config(state="disabled")
+    
+def show_variables():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay variables para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Variables")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Variables", font=("Arial", 11))
+    label.pack()
+
+    variable_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    variable_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Valor", "Estado"]
+    header_format = "{:<20} {:<15} {:<20} {:<10}\n".format(*headers)
+    variable_popup.insert("end", header_format)
+    variable_popup.insert("end", "-" * 70 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "VARIABLE":
+            row_format = "{:<20} {:<15} {:<20} {:<10}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Valor", "")[:20],
+                symbol.get("Estado", "")[:10]
+            )
+            variable_popup.insert("end", row_format)
+
+    variable_popup.config(state="disabled")
+
+def show_functions():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay funciones para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Funciones")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Funciones", font=("Arial", 11))
+    label.pack()
+
+    function_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    function_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Parámetros"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    function_popup.insert("end", header_format)
+    function_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "FUNCIÓN":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Parámetros", "")[:20]
+            )
+            function_popup.insert("end", row_format)
+
+    function_popup.config(state="disabled")
+
+def show_definitionsUsers():
+    global symbol_table_instance
+    
+    if not symbol_table_instance.get_all_symbols():
+        messagebox.showinfo("Información", "No hay estructuras para mostrar.")
+        return
+
+    pop_up = tk.Toplevel(root)
+    pop_up.title("Estructuras")
+    pop_up.geometry("800x600")
+
+    label = tk.Label(pop_up, text="Estructuras", font=("Arial", 11))
+    label.pack()
+
+    structure_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
+    structure_popup.pack(expand=True, fill="both")
+
+    # Headers
+    headers = ["Identificador", "Tipo", "Campos"]
+    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    structure_popup.insert("end", header_format)
+    structure_popup.insert("end", "-" * 55 + "\n")
+    
+    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
+        if symbol.get("Categoría") == "ESTRUCTURA":
+            row_format = "{:<20} {:<15} {:<20}\n".format(
+                identifier[:20],
+                symbol.get("Tipo", "")[:15],
+                symbol.get("Campos", "")[:20]
+            )
+            structure_popup.insert("end", row_format)
+
+    structure_popup.config(state="disabled")
 
 #==================== DEFINICIÓN DE TOKENS ====================
 
@@ -688,9 +789,6 @@ def update_line_numbers(event=None):
     line_numbers.delete(1.0, "end")  # Borrar los números anteriores
     lines = input_code.get("1.0", "end-1c").split('\n')
     line_numbers.insert("end", "\n".join(str(i) for i in range(1, len(lines)+1)))
-    # line_count = int(input_code.index('end-1c').split('.')[0])  # Número de líneas del Text
-    # for i in range(1, line_count + 1):
-    #     line_numbers.insert("end", f"{i}\n")  # Insertar los números de línea
 
     line_numbers.config(state="disabled")
 
@@ -703,43 +801,75 @@ def compile_code():
         console_output.insert("end", "No hay código para compilar.\n")
         return
 
-    # Limpiar resultados anteriores
     console_output.delete("1.0", "end")
     symbol_table_instance.clear()
     tokens_list.clear()
+    error_manager.clear_errors()
     
-    console_output.insert("end", "🔍 Analizando código...\n")
-    root.update()  # Actualizar la interfaz para mostrar el mensaje
-
+    tracker = SymbolTracker()
+    
     try:
-        # Análisis léxico (capturar tokens para tabla de símbolos)
-        tokens_lexicos = list(parser.lex(code))  # <-- Esto obtiene los tokens para la tabla
-        tokens_list = [
-            f"{t.line}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
-            for t in tokens_lexicos  # Usa t.line en lugar de enumerate
-        ]
+        # Primera pasada: análisis léxico y rastreo de símbolos
+        tokens_lexicos = list(parser.lex(code))
+        
+        # Procesamiento para identificar declaraciones y usos
+        i = 0
+        while i < len(tokens_lexicos):
+            token = tokens_lexicos[i]
+            
+            # Manejo de cambios de ámbito
+            if token.type == "LBRACE":
+                tracker.enter_scope()
+            elif token.type == "RBRACE":
+                tracker.exit_scope()
+            
+            # Detección de declaraciones de variables
+            if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING"]:
+                if i+1 < len(tokens_lexicos) and tokens_lexicos[i+1].type == "IDENTIFICADOR":
+                    var_name = tokens_lexicos[i+1].value
+                    tracker.add_declaration(var_name, token.line, token.type)
+                    i += 1  # Saltar el identificador
+            
+            # Registro de usos de identificadores
+            elif token.type == "IDENTIFICADOR":
+                tracker.add_usage(token.value, token.line)
+                
+                # Verificar si el identificador fue declarado
+                if not tracker.get_declaration_line(token.value):
+                    error_manager.add_error(
+                        line=token.line,
+                        subject=token.value,
+                        error_type="Variable no declarada",
+                        solution="Declare la variable antes de usarla"
+                    )
+            
+            i += 1
+        
+        # Segunda pasada: generación de tokens_list con líneas correctas
+        tokens_list = []
+        for token in tokens_lexicos:
+            if token.type == "IDENTIFICADOR":
+                decl_line = tracker.get_declaration_line(token.value) or token.line
+            else:
+                decl_line = token.line
+                
+            token_info = f"{decl_line}: {TOKENS_GRAMATICA.get(token.type, token.type)}: {token.value}"
+            tokens_list.append(token_info)
         
         # Análisis sintáctico
-        tree = parser.parse(code)
+        parser.parse(code)
         console_output.insert("end", "✅ Análisis completado sin errores\n")
         
-        # Mostrar advertencias si hay tokens sospechosos
+        # Mostrar advertencias
         mostrar_advertencias(tokens_list)
         
     except UnexpectedInput as e:
-        # Si hay error, igual guardamos los tokens capturados hasta el error
-        tokens_lexicos = list(parser.lex(code))
-        tokens_list = [
-            f"{i+1}: {TOKENS_GRAMATICA.get(t.type, t.type)}: {t.value}"
-            for i, t in enumerate(tokens_lexicos)
-        ]
-        mostrar_error_sintactico(e, code)
-    except Exception as e:
-        mostrar_error_general(e)
+        # Manejo de errores...
+        pass
+        
     finally:
-        # Mostrar tabla de símbolos si hay tokens capturados
         if tokens_list:
-            show_symbol_table()
+            show_symbol_table(tracker)  # Pasar el tracker a la tabla de símbolos
 
 def mostrar_error_lexico(error_msg, code):
     """Muestra errores léxicos con formato específico"""
@@ -844,75 +974,6 @@ def obtener_lista_tokens(codigo):
         
     except UnexpectedInput as e:
         handle_syntax_error(e, codigo)
-    
-    # try:
-    #     tokens = list(parser.lex(codigo))
-    #     resultado = []
-    #     sentencia_id = 1
-        
-    #     # Verificar tokens inválidos
-    #     for i, token in enumerate(tokens):
-    #         if token.type == "ERROR":
-    #             error_info = error_manager.add_error(
-    #                 line=token.line,
-    #                 subject=token.value,
-    #                 error_type="Léxico - Símbolo no reconocido",
-    #                 solution="Revisar que el símbolo sea válido o esté bien escrito"
-    #             )
-    #             resultado.append(f"Error en línea {token.line}: Símbolo no reconocido '{token.value}'")
-    #         else:
-    #             tipo_token = TOKENS_GRAMATICA.get(token.type, token.type)
-    #             resultado.append(f"{sentencia_id}: {tipo_token}: {token.value}")
-    #             if token.type == "SEMICOLON":
-    #                 sentencia_id += 1
-    #             # Dentro de obtener_lista_tokens, después de procesar un token normal
-    #             # Para detección de arreglos
-    #             if token.type == "IDENTIFICADOR" and i+1 < len(tokens) and tokens[i+1].type == "LBRACKET":
-    #                 # Buscar dimensiones del arreglo
-    #                 j = i + 1
-    #                 while j < len(tokens) and tokens[j].type == "LBRACKET":
-    #                     j += 1  # Avanzar hasta encontrar el contenido
-    #                     while j < len(tokens) and tokens[j].type != "RBRACKET":
-    #                         j += 1
-    #                     j += 1  # Pasar el RBRACKET
-                    
-    #                 # Agregar token especial para el arreglo
-    #                 resultado.append(f"{token.line}: ARREGLO: {token.value}[]")
-
-    #             # Para detección de estructuras
-    #             if token.type == "STRUCT" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
-    #                 resultado.append(f"{token.line}: STRUCT: {tokens[i+1].value}")
-        
-    #     return resultado
-        
-    # except UnexpectedInput as e:
-    #     # Manejar errores sintácticos
-    #     error_line = e.line
-    #     error_token = e.token.value if hasattr(e, 'token') else "?"
-    #     expected = ", ".join(e.expected) if e.expected else "elemento no especificado"
-        
-    #     error_info = error_manager.add_error(
-    #         line=error_line,
-    #         subject=error_token,
-    #         error_type=f"Sintáctico - Token inesperado",
-    #         solution=f"Se esperaba: {expected}"
-    #     )
-        
-    #     error_msg = (
-    #         f"Error en línea {error_line}: Token inesperado '{error_token}'\n"
-    #         f"Contexto:\n{e.get_context(codigo)}\n"
-    #         f"Se esperaba: {expected}"
-    #     )
-    #     return [error_msg]
-    
-    # except Exception as e:
-    #     error_info = error_manager.add_error(
-    #         line=0,
-    #         subject="Desconocido",
-    #         error_type="General - Error inesperado",
-    #         solution="Revisar el código fuente para errores obvios"
-    #     )
-    #     return [f"Error en el análisis léxico: {str(e)}"]
 
 #==================== CONFIGURACIÓN DE INTERFAZ ====================
 root = tk.Tk()
@@ -946,6 +1007,14 @@ symbol_table_button = tk.Button(frame_superior, text="Tabla de Simbolos", comman
 symbol_table_button.pack(side="right", padx=10, pady=5)
 ats_buttun = tk.Button(frame_superior, text="ATS", command=show_ats_tree)
 ats_buttun.pack(side="right", padx=10, pady=5)
+identificator_button = tk.Button(frame_superior, text="Identificadores", command=show_identificators)
+identificator_button.pack(side="right", padx=10, pady=5)
+variables_button = tk.Button(frame_superior, text="Variables", command=show_variables)
+variables_button.pack(side="right", padx=10, pady=5)
+functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=show_functions)
+functions_button.pack(side="right", padx=10, pady=5)
+definitionUsers_button = tk.Button(frame_superior, text="Definiciones por Usuario", command=show_definitionsUsers)
+definitionUsers_button.pack(side="right", padx=10, pady=5)
 
 # Canvas para los números de línea
 line_numbers = tk.Text(frame_izq, width=2, bg="lightgray", fg="black", font=("Consolas", 12), padx=5, state="disabled", wrap="none")

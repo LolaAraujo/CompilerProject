@@ -258,7 +258,7 @@ def show_symbol_table():
                     symbol_details = {
                         "Identificador": identifier,
                         "Categoría": category,
-                        "Tipo": symbol_table_instance.infer_type(token_type, identifier),
+                        "Tipo": token_type, #symbol_table_instance.infer_type(token_type, identifier),
                         "Ámbito": "Global" if identifier == "global" else "Local",
                         "Dirección": f"0x{abs(hash(identifier)):08X}",
                         "Línea": line_number,
