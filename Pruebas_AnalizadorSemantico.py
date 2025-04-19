@@ -694,15 +694,15 @@ def show_identificators():
     identificator_popup.config(state="disabled")
     
 def show_variables():
-    global tokens_list, symbol_table_instance
-    
-    if not tokens_list:
-        messagebox.showinfo("Información", "No hay variables para mostrar.")
+    global global_tracker, tokens_list
+
+    if not global_tracker or not global_tracker.symbols:
+        messagebox.showinfo("Información", "No hay variables para mostrar. Compile primero.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Variables")
-    pop_up.geometry("800x500")
+    pop_up.geometry("900x500")
 
     label = tk.Label(pop_up, text="Variables", font=("Arial", 11))
     label.pack()
@@ -710,37 +710,85 @@ def show_variables():
     variable_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     variable_popup.pack(expand=True, fill="both")
 
-    # Headers
-    headers = ["Identificador", "Tamaño", "Dirección Relativa", "Atributos Constante", "Modificabilidad"]
-    header_format = "{:<20} {:<15} {:<20} {:<25} {:<25}\n".format(*headers)
+    # Encabezados
+    headers = [
+        "Identificador", 
+        "Tipo", 
+        "Tamaño Memoria", 
+        "Dirección Relativa", 
+        "Atributos Constante", 
+        "Modificabilidad"
+    ]
+    header_format = "{:<20} {:<15} {:<15} {:<20} {:<25} {:<20}\n".format(*headers)
     variable_popup.insert("end", header_format)
     variable_popup.insert("end", "-" * 110 + "\n")
+
+    # Tamaños por tipo
+    def get_size(var_type):
+        sizes = {
+            "int": 4,
+            "float": 4,
+            "bool": 1,
+            "char": 1,
+            "string": 8,
+            "array": 8,
+            "struct": 8
+        }
+        return sizes.get(var_type.lower(), 4)
+
+    # Detección de constante usando expresiones regulares
+    def get_const_info(name, var_type):
+        for i in range(len(tokens_list) - 2):
+            if (": CONST: const" in tokens_list[i] and
+                f": {var_type.upper()}: " in tokens_list[i + 1] and
+                f": IDENTIFICADOR: {name}" in tokens_list[i + 2]):
+                return "Constante"
+        return "No aplica"
+
+    def get_modifiability(name, var_type, is_const, info):
+        if is_const:
+            return "No (const)"
+        
+        if info.get('is_pointer', False):
+            return "No (puntero)"
+
+        for i in range(len(tokens_list) - 1):
+            if (f": IDENTIFICADOR: {name}" in tokens_list[i] and
+                ": ASSIGN: =" in tokens_list[i + 1]):
+                # Excluir declaración
+                declared = False
+                for j in range(max(i - 2, 0), i):
+                    if f": {var_type.upper()}:" in tokens_list[j] or ": CONST:" in tokens_list[j]:
+                        declared = True
+                        break
+                if not declared:
+                    return "Sí"
     
-    for token in tokens_list:
-        parts = token.split(": ")
-        if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
-            decl_line, token_type, identifier = parts
-            
-            symbol_details = { ########################
-                "Identificador": identifier,
-                "Tamaño": symbol_table_instance.infer_type(token_type, identifier),
-                "Dirección Relativa": symbol_scope,
-                "Atributos Constante": str(decl_line),
-                "Modificabilidad": symbol_table_instance.determine_state(identifier),
-            }
-            
-            symbol_table_instance.add_symbol(identifier, symbol_details)
-    
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "VARIABLE":
-            row_format = "{:<20} {:<15} {:<20} {:<25} {:<25}\n".format(
-                identifier[:20],
-                symbol.get("Tamaño", "")[:15],
-                symbol.get("Dirección Relativa", "")[:20],
-                symbol.get("Atributos Constante", "")[:25],
-                symbol.get("Modificabilidad", "")[:25]
-            )
-            variable_popup.insert("end", row_format)
+        return "No (solo lectura)"
+
+    # Mostrar cada variable
+    for name, info in global_tracker.symbols.items():
+        if info.get('is_function', False):
+            continue
+        
+        var_type = info.get('type', 'desconocido')
+        usage_lines = global_tracker.usages.get(name, [])
+
+        const_value = get_const_info(name, var_type)
+        is_const = const_value != "No aplica"
+
+        modifiability = get_modifiability(name, var_type, is_const, info)
+        address = f"0x{abs(hash(name)) % 65536:04X}"
+
+        row_format = "{:<20} {:<15} {:<15} {:<20} {:<25} {:<20}\n".format(
+            name[:20],
+            var_type[:15],
+            str(get_size(var_type))[:15],
+            address[:20],
+            const_value[:25],
+            modifiability[:20],
+        )
+        variable_popup.insert("end", row_format)
 
     variable_popup.config(state="disabled")
 
@@ -999,6 +1047,7 @@ def compile_code():
         
         print("=== Símbolos registrados ===")
         print(tracker.symbols)
+        print(tokens_list)
         # Guardar análisis para uso posterior
         symbol_table_instance.save_analysis({
             'symbols': tracker.symbols,
