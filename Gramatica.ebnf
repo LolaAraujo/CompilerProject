@@ -39,9 +39,10 @@ operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTE
 operador_logico : AND | OR | NOT
 operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
 
-expression : expression_aritmetica | expression_booleana
+expression : expression_aritmetica | expression_booleana | llamada_funcion
 expression_aritmetica : term (( PLUS | MINUS ) term)*
 expression_booleana : comparacion (operador_logico comparacion)* | "(" expression_booleana ")"
+llamada_funcion : identificador "(" [expression ("," expression)*] ")"
 comparacion : expression_aritmetica operador_relacional expression_aritmetica | "(" comparacion ")"
 
 
