@@ -7,7 +7,7 @@
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
-from lark import Lark
+from lark import Lark, Tree, Token
 from lark.exceptions import UnexpectedInput
 import re
 from tkinter import Toplevel
@@ -17,6 +17,7 @@ import json
 from lark.tree import pydot__tree_to_png
 from collections import defaultdict
 
+
 # Ejemplo de código para analizar
 # func suma(int a, int b) -> int {
 #     return a + b;
@@ -25,6 +26,7 @@ from collections import defaultdict
 # Variable global para almacenar tokens
 tokens_list = []
 global_tracker = None
+parse_tree = None
 
 #==================== MANEJO DE ERRORES ====================
 
@@ -796,11 +798,11 @@ def show_functions():
     global tokens_list, symbol_table_instance
     
     if not tokens_list:
-        messagebox.showinfo("Información", "No hay funciones para mostrar.")
+        messagebox.showinfo("Información", "No hay funciones|procedimiendos para mostrar.")
         return
 
     pop_up = tk.Toplevel(root)
-    pop_up.title("Funciones")
+    pop_up.title("Funciones y Procedimientos")
     pop_up.geometry("970x500")
 
     label = tk.Label(pop_up, text="Funciones", font=("Arial", 11))
@@ -809,7 +811,7 @@ def show_functions():
     function_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     function_popup.pack(expand=True, fill="both")
 
-    # Headers
+    #Headers
     headers = ["Identificador", "Firma", "Parámetros", "Tipo de Retorno", "Variables Locales", "Estado de Implementación"]
     header_format = "{:<20} {:<20} {:<20} {:<20} {:<20} {:<20}\n".format(*headers)
     function_popup.insert("end", header_format)
@@ -820,7 +822,7 @@ def show_functions():
         if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
             decl_line, token_type, identifier = parts
             
-            ################################
+            ##############################
             symbol_details = {
                 "Identificador": identifier,
                 "Firma": symbol_table_instance.infer_type(token_type, identifier),
@@ -1043,7 +1045,10 @@ def compile_code():
         
         # Análisis sintáctico
         parser.parse(code)
+        global parse_tree  
+        parse_tree = parser.parse(code)
         console_output.insert("end", "✅ Análisis completado sin errores\n")
+        # pydot__tree_to_png(parse_tree, "tree.png")
         
         print("=== Símbolos registrados ===")
         print(tracker.symbols)
@@ -1204,7 +1209,7 @@ identificator_button = tk.Button(frame_superior, text="Identificadores", command
 identificator_button.pack(side="right", padx=10, pady=5)
 variables_button = tk.Button(frame_superior, text="Variables", command=show_variables)
 variables_button.pack(side="right", padx=10, pady=5)
-functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=show_functions)
+functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=lambda: show_functions(parse_tree))
 functions_button.pack(side="right", padx=10, pady=5)
 definitionUsers_button = tk.Button(frame_superior, text="Definiciones por Usuario", command=show_definitionsUsers)
 definitionUsers_button.pack(side="right", padx=10, pady=5)
