@@ -11,76 +11,100 @@ statement : declaracion ";"
           | loop
           | control_flujo ";"
           | funcion
+          | clase
+          | interface
           | try_catch
           | module ";"
           | exportacion ";"
 
-
-
-
-
+// TIPOS DE DATOS
 tipo_dato : "int" | "float" | "bool" | "char" | "string"
-            | "array" "<" tipo_dato ">"
-            | "struct"
-            | "enum"
-            | "void"
+          | "array" "<" tipo_dato ">"
+          | "struct"
+          | "enum"
+          | "void"
+          | identificador    // para clases o tipos definidos por el usuario
 
+// ENTRADA Y SALIDA
 entrada : "read" "(" identificador ")"
 salida : "print" "(" expression ")"
 
+// IDENTIFICADORES Y NUMEROS
 identificador : IDENTIFICADOR
-
-digit : "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+digit : "0".."9"
 number : digit+
 float_number : digit+ "." digit+
 
+// OPERADORES
 operador_aritmetico : PLUS | MINUS | STAR | SLASH | PERCENT
 operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTEQUAL
 operador_logico : AND | OR | NOT
 operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
 
+// EXPRESIONES
 expression : expression_aritmetica | expression_booleana
 expression_aritmetica : term (( PLUS | MINUS ) term)*
 expression_booleana : comparacion (operador_logico comparacion)* | "(" expression_booleana ")"
 comparacion : expression_aritmetica operador_relacional expression_aritmetica | "(" comparacion ")"
 
-
 term : factor (( STAR | SLASH | PERCENT ) factor)*
 factor : number | float_number | identificador | STRING | "(" expression ")"  
 
+// CONDICIONALES
 condicional : "if" "(" expression_booleana ")" bloque ("else" bloque)?
 
+// BLOQUES
 bloque : "{" (statement)* "}"
 
-comentario: COMENTARIO_SIMPLE | COMENTARIO_MULTILINEA
-
+// SWITCH
 switch : "switch" "(" expression ")" "{" casos "}"
 casos : (case)+ ("default" ":" bloque)?
 case : "case" expression ":" bloque
 
+// BUCLES
 loop : "for" "(" (asignacion | declaracion) ";" expression_booleana ";" asignacion ")" bloque
-      | "while" "(" expression_booleana ")" bloque
-      | "do" bloque "while" "(" expression_booleana ")" ";"
-      
+     | "while" "(" expression_booleana ")" bloque
+     | "do" bloque "while" "(" expression_booleana ")" ";"
 
+// DECLARACIONES Y CONSTANTES
 declaracion : tipo_dato identificador (ASSIGN expression)? 
-
-asignacion : identificador ASSIGN expression  
-           | identificador operador_asignacion expression  
-
+asignacion : identificador operador_asignacion expression 
 constante : "const" tipo_dato? identificador "=" expression
 
+// CONTROL DE FLUJO
 control_flujo : "break" | "continue" | "return" expression?
 
+// FUNCIONES
 funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
-parametros : tipo_dato identificador ("," tipo_dato identificador)*
+parametros : parametro ("," parametro)*
+parametro : tipo_dato identificador
 
+// TRY CATCH
 try_catch : "try" bloque "catch" "(" identificador ")" bloque
 
+// MÓDULOS
 module : "import" identificador
 exportacion : "export" identificador
 
-// DEFINICIÓN DE TOKENS
+// PROGRAMACIÓN ORIENTADA A OBJETOS
+
+// CLASES
+clase : "class" identificador (herencia)? "{" miembros_clase "}"
+herencia : ":" identificador
+miembros_clase : (atributo | metodo)*
+
+// ATRIBUTOS Y MÉTODOS
+atributo : tipo_dato identificador ("=" expression)? ";"
+metodo : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
+
+// INTERFACES
+interface : "interface" identificador "{" firma_metodo* "}"
+firma_metodo : "func" identificador "(" (parametros)? ")" "->" tipo_dato ";"
+
+// COMENTARIOS
+comentario: COMENTARIO_SIMPLE | COMENTARIO_MULTILINEA
+
+// TOKENS
 IDENTIFICADOR: /[a-zA-Z_][a-zA-Z0-9_]*/
 STRING: /"[^"]*"/
 
@@ -107,7 +131,7 @@ MINUSASSIGN: "-="
 STARASSIGN: "*="
 SLASHASSIGN: "/="
 
-// Comentarios
+// COMENTARIOS
 COMENTARIO_SIMPLE: /\/\/.*/
 COMENTARIO_MULTILINEA: /\/\*[\s\S]*?\*\//
 

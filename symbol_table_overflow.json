@@ -2,47 +2,13 @@
   "x": {
     "Identificador": "x",
     "Categor\u00eda": "IDENTIFICADOR",
-    "Tipo": "variable",
-<<<<<<< HEAD
-    "\u00c1mbito": "local",
-    "Direcci\u00f3n": "0xE828D65A6D4411",
-    "L\u00ednea": "1",
-    "Valor": "No inicializado",
-    "Estado": "Usado (no declarado)",
-    "Estructura": "Variable simple",
-    "Uso": "1"
-  },
-  "a": {
-    "Identificador": "a",
-    "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "INT",
     "\u00c1mbito": "global",
-    "Direcci\u00f3n": "0x1E73E1D3E25951B0",
+    "Direcci\u00f3n": "0x3F3AD8DBC158BCF3",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
     "Estado": "Usado (no declarado)",
     "Estructura": "Variable simple",
     "Uso": "2"
-  },
-  "b": {
-    "Identificador": "b",
-    "Categor\u00eda": "IDENTIFICADOR",
-    "Tipo": "INT",
-    "\u00c1mbito": "global",
-    "Direcci\u00f3n": "0x4D6773C5F16F3036",
-    "L\u00ednea": "1",
-    "Valor": "No inicializado",
-    "Estado": "Usado (no declarado)",
-    "Estructura": "Variable simple",
-    "Uso": "2"
-=======
-    "\u00c1mbito": "Local",
-    "Direcci\u00f3n": "0x2A4BFBF17F5FDC1B",
-    "L\u00ednea": "3",
-    "Valor": "No inicializado",
-    "Estado": "Usado (sin declarar)",
-    "Estructura": "N/A",
-    "Uso": 1
->>>>>>> dd3c43b711c1fb88816a22590d8f72e5297ba662
   }
 }
