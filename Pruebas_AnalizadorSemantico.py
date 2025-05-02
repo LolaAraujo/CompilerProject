@@ -295,7 +295,7 @@ class SymbolTable:
         # # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
-            if identifier in ["void", "read", "func", "main"]:
+            if identifier in ["void", "read", "func", "main", "struct"]:
                 return "función"
             elif identifier in ["print"]:
                 return "función de salida"
@@ -471,7 +471,7 @@ def show_symbol_table():
         usage_count = len(global_tracker.usages.get(identifier, []))
         
         # Determinar categoría
-        if identifier in ["main", "print", "void", "read", "func"] or symbol_info.get('is_function', False):
+        if identifier in ["main", "print", "void", "read", "func", "struct"] or symbol_info.get('is_function', False):
             category = "FUNCIÓN"
         else:
             # Buscar el tipo de token en los tokens originales si es necesario
