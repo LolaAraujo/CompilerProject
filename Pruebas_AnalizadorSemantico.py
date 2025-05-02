@@ -108,6 +108,8 @@ class SymbolTracker:
         if name not in self.symbols:
             self.add_declaration(name, line, 'function')
         self.symbols[name]['is_function'] = True
+        self.symbols[name]['params'] = []
+        self.symbols[name]['return_type'] = 'void'
     
     def get_full_type(self, name):
         info = self.declarations.get(name, {})
@@ -794,111 +796,106 @@ def show_variables():
 
     variable_popup.config(state="disabled")
 
-def show_functions():
+def show_functions(parse_tree):
     global tokens_list, symbol_table_instance
-    
+
     if not tokens_list:
-        messagebox.showinfo("Información", "No hay funciones|procedimiendos para mostrar.")
+        messagebox.showinfo("Información", "No hay funciones/procedimientos para mostrar.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Funciones y Procedimientos")
-    pop_up.geometry("970x500")
-
+    pop_up.geometry("1150x500")
     label = tk.Label(pop_up, text="Funciones", font=("Arial", 11))
     label.pack()
-
     function_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     function_popup.pack(expand=True, fill="both")
 
-    #Headers
-    headers = ["Identificador", "Firma", "Parámetros", "Tipo de Retorno", "Variables Locales", "Estado de Implementación"]
-    header_format = "{:<20} {:<20} {:<20} {:<20} {:<20} {:<20}\n".format(*headers)
+    # Headers
+    headers = ["Identificador", "Firma", "Lista de Parámetros", "Tipo de Retorno", "Variables Locales", "Estado de Implementación"]
+    header_format = "{:<20} {:<30} {:<30} {:<20} {:<30} {:<25}\n".format(*headers)
     function_popup.insert("end", header_format)
-    function_popup.insert("end", "-" * 130 + "\n")
-    
-    for token in tokens_list:  
-        parts = token.split(": ")
-        if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
-            decl_line, token_type, identifier = parts
+    function_popup.insert("end", "-" * 155 + "\n")
+
+    for identifier, symbol_info in global_tracker.symbols.items():
+        if symbol_info.get('is_function', False):
+            # Obtener firma completa
+            params_str = ", ".join([param['name'] for param in symbol_info.get('params', [])])
+            firma = f"{symbol_info.get('type', 'desconocido')} {identifier}({params_str})"
             
-            ##############################
-            symbol_details = {
-                "Identificador": identifier,
-                "Firma": symbol_table_instance.infer_type(token_type, identifier),
-                "Parámetros": str(decl_line),
-                "Tipo de Retorno": symbol_scope,
-                "Variables Locales": symbol_table_instance.get_structure_info(identifier, token_type),
-                "Estado de Implementación": symbol_table_instance.determine_state(identifier),
-            }
+            # Lista de parámetros
+            lista_parametros = ", ".join([f"{param['name']} ({param['type']}, {param['mode']})" for param in symbol_info.get('params', [])])
             
-            symbol_table_instance.add_symbol(identifier, symbol_details)
-    
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "FUNCIÓN":
-            row_format = "{:<20} {:<20} {:<20} {:<20} {:<20} {:<20}\n".format(
+            # Tipo de retorno
+            tipo_retorno = symbol_info.get('return_type', 'desconocido')
+            
+            # Variables locales
+            variables_locales = ", ".join(symbol_info.get('local_vars', []))
+            
+            # Estado de implementación
+            estado_implementacion = "Declarada" if symbol_info.get('declared', False) and not symbol_info.get('defined', False) else "Definida"
+
+            row_format = "{:<20} {:<30} {:<30} {:<20} {:<30} {:<25}\n".format(
                 identifier[:20],
-                symbol.get("Firma", "")[:20],
-                symbol.get("Parámetros", "")[:20],
-                symbol.get("Tipo de Retorno", "")[:20],
-                symbol.get("Variables Locales", "")[:20],
-                symbol.get("Estado Implementación", "")[:20]
+                firma[:30],
+                lista_parametros[:30],
+                tipo_retorno[:20],
+                variables_locales[:30],
+                estado_implementacion[:25]
             )
             function_popup.insert("end", row_format)
 
     function_popup.config(state="disabled")
 
+
+
+
 def show_definitionsUsers():
     global tokens_list, symbol_table_instance
-    
+
     if not tokens_list:
         messagebox.showinfo("Información", "No hay estructuras para mostrar.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Estructuras")
-    pop_up.geometry("880x500")
-    
+    pop_up.geometry("1000x500")
     label = tk.Label(pop_up, text="Estructuras", font=("Arial", 11))
     label.pack()
-
     structure_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     structure_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Estructura Interna", "Metodos Asociados", "Herencia", "Restricciones"]
-    header_format = "{:<20} {:<25} {:<25} {:<25} {:<25}\n".format(*headers)
+    headers = ["Identificador", "Estructura Interna", "Métodos Asociados", "Herencia", "Restricciones"]
+    header_format = "{:<20} {:<30} {:<30} {:<30} {:<30}\n".format(*headers)
     structure_popup.insert("end", header_format)
-    structure_popup.insert("end", "-" * 120 + "\n")
-    
-    for token in tokens_list:
-        parts = token.split(": ")
-        ####################################################################
-        if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
-            decl_line, token_type, identifier = parts
+    structure_popup.insert("end", "-" * 140 + "\n")
+
+    for identifier, symbol_info in global_tracker.symbols.items():
+        if symbol_info.get('is_struct', False):
+            # Estructura interna
+            estructura_interna = ", ".join(symbol_info.get('fields', []))
             
-            symbol_details = {
-                "Identificador": identifier,
-                "Estructura Interna": symbol_table_instance.infer_type(token_type, identifier),
-                "Metodos Asociados": str(decl_line),
-                "Herencia": symbol_scope,
-                "Restricciones": symbol_table_instance.get_structure_info(identifier, token_type),
-            }
+            # Métodos asociados
+            metodos_asociados = ", ".join(symbol_info.get('methods', []))
             
-            symbol_table_instance.add_symbol(identifier, symbol_details)
-    
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "ESTRUCTURA":
-            row_format = "{:<20} {:<25} {:<25} {:<25} {:<25}\n".format(
+            # Herencia
+            herencia = symbol_info.get('inheritance', 'N/A')
+            
+            # Restricciones
+            restricciones = symbol_info.get('restrictions', 'N/A')
+
+            row_format = "{:<20} {:<30} {:<30} {:<30} {:<30}\n".format(
                 identifier[:20],
-                symbol.get("Estructura Interna", "")[:25],
-                symbol.get("Metodos Asociados", "")[:25],
-                symbol.get("Herencia", "")[:25],
-                symbol.get("Restricciones", "")[:25]
+                estructura_interna[:30],
+                metodos_asociados[:30],
+                herencia[:30],
+                restricciones[:30]
             )
             structure_popup.insert("end", row_format)
 
     structure_popup.config(state="disabled")
+
 
 #==================== DEFINICIÓN DE TOKENS ====================
 
@@ -1014,10 +1011,58 @@ def compile_code():
                 brace_level -= 1
                 tracker.exit_scope()
 
-            # Detección de funciones (MEJORADO)
+            # Detección de funciones (MEJORADO++)
             if token.type == "FUNC" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
                 func_name = tokens[i+1].value
+                params = []
+                return_type = "void"  # Valor por defecto si no se especifica
+                local_vars = []
+
+                # Buscar el tipo de retorno y los parámetros
+                j = i + 2
+                while j < len(tokens):
+                    if tokens[j].type == "LPAR":
+                        # Procesar parámetros
+                        k = j + 1
+                        while k < len(tokens) and tokens[k].type != "RPAR":
+                            if tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                param_type = tokens[k].value
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    param_name = tokens[k+1].value
+                                    params.append({"name": param_name, "type": param_type, "mode": "valor"})  # Asumimos modo de paso por valor
+                            k += 1
+                        j = k
+                    elif tokens[j].type == "__ANON_11":
+                        # Procesar tipo de retorno
+                        if j+1 < len(tokens) and tokens[j+1].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT", "VOID"]:
+                            return_type = tokens[j+1].value
+                    elif tokens[j].type == "LBRACE":
+                        # Procesar variables locales dentro del bloque de la función
+                        brace_level = 1
+                        k = j + 1
+                        while k < len(tokens) and brace_level > 0:
+                            if tokens[k].type == "LBRACE":
+                                brace_level += 1
+                            elif tokens[k].type == "RBRACE":
+                                brace_level -= 1
+                            elif tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                var_type = tokens[k].value
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    var_name = tokens[k+1].value
+                                    local_vars.append(var_name)
+                            k += 1
+                        break
+                    j += 1
+
                 tracker.set_function(func_name, token.line)
+                tracker.symbols[func_name].update({
+                    "params": params,
+                    "return_type": return_type,
+                    "local_vars": local_vars,
+                    "declared": True,
+                    "defined": True  # Asumimos que la función está definida si se encuentra el bloque
+                })
+
 
             # Detección de declaraciones (VERSIÓN CORREGIDA)
             if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
