@@ -74,6 +74,7 @@ constante : "const" tipo_dato? identificador "=" expression
 control_flujo : "break" | "continue" | "return" expression?
 
 funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
+struct : "struct" identificador bloque
 parametros : tipo_dato identificador ("," tipo_dato identificador)*
 
 try_catch : "try" bloque "catch" "(" identificador ")" bloque

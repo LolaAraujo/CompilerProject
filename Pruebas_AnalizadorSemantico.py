@@ -73,6 +73,7 @@ class SymbolTracker:
         self.current_scope = "global"
         self.scope_level = 0
         self.current_function = None
+        self.current_struct = None
         self.symbols = {}
     
     def add_declaration(self, name, line, symbol_type, is_pointer=False, is_struct=False):
@@ -110,6 +111,15 @@ class SymbolTracker:
         self.symbols[name]['is_function'] = True
         self.symbols[name]['params'] = []
         self.symbols[name]['return_type'] = 'void'
+
+    def set_struct(self, name, line):
+        self.current_struct = name
+        if name not in self.symbols:
+            self.add_declaration(name, line, 'struct')
+        self.symbols[name]['is_struct'] = True
+        self.symbols[name]['fields'] = []
+        self.symbols[name]['methods'] = []
+
     
     def get_full_type(self, name):
         info = self.declarations.get(name, {})
@@ -1062,6 +1072,85 @@ def compile_code():
                     "declared": True,
                     "defined": True  # Asumimos que la función está definida si se encuentra el bloque
                 })
+
+            # Detección de structs (MEJORADO)
+            if token.type == "STRUCT" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
+                struct_name = tokens[i+1].value
+                fields = []
+                methods = []
+
+                # Procesar el bloque de la struct
+                j = i + 2
+                while j < len(tokens):
+                    if tokens[j].type == "LBRACE":
+                        brace_level = 1
+                        k = j + 1
+                        while k < len(tokens) and brace_level > 0:
+                            if tokens[k].type == "LBRACE":
+                                brace_level += 1
+                            elif tokens[k].type == "RBRACE":
+                                brace_level -= 1
+                            elif tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                # Detectar campos de la struct
+                                field_type = tokens[k].value
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    field_name = tokens[k+1].value
+                                    fields.append({"name": field_name, "type": field_type})
+                            elif tokens[k].type == "FUNC" and k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                # Detectar métodos de la struct
+                                method_name = tokens[k+1].value
+                                method_params = []
+                                method_return_type = "void"  # Valor por defecto si no se especifica
+
+                                # Buscar el tipo de retorno y los parámetros del método
+                                m = k + 2
+                                while m < len(tokens):
+                                    if tokens[m].type == "LPAR":
+                                        # Procesar parámetros del método
+                                        n = m + 1
+                                        while n < len(tokens) and tokens[n].type != "RPAR":
+                                            if tokens[n].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                                param_type = tokens[n].value
+                                                if n+1 < len(tokens) and tokens[n+1].type == "IDENTIFICADOR":
+                                                    param_name = tokens[n+1].value
+                                                    method_params.append({"name": param_name, "type": param_type, "mode": "valor"})  # Asumimos modo de paso por valor
+                                            n += 1
+                                        m = n
+                                    elif tokens[m].type == "ARROW":
+                                        # Procesar tipo de retorno del método
+                                        if m+1 < len(tokens) and tokens[m+1].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT", "VOID"]:
+                                            method_return_type = tokens[m+1].value
+                                    elif tokens[m].type == "LBRACE":
+                                        # Procesar variables locales dentro del bloque del método
+                                        method_brace_level = 1
+                                        n = m + 1
+                                        while n < len(tokens) and method_brace_level > 0:
+                                            if tokens[n].type == "LBRACE":
+                                                method_brace_level += 1
+                                            elif tokens[n].type == "RBRACE":
+                                                method_brace_level -= 1
+                                            n += 1
+                                        break
+                                    m += 1
+
+                                methods.append({
+                                    "name": method_name,
+                                    "params": method_params,
+                                    "return_type": method_return_type,
+                                    "declared": True,
+                                    "defined": True  # Asumimos que el método está definido si se encuentra el bloque
+                                })
+                            k += 1
+                        break
+                    j += 1
+
+                tracker.symbols[struct_name] = {
+                    "type": "struct",
+                    "fields": fields,
+                    "methods": methods,
+                    "declared": True,
+                    "is_struct": True  # Asumimos que la struct está definida si se encuentra el bloque
+                }
 
 
             # Detección de declaraciones (VERSIÓN CORREGIDA)
