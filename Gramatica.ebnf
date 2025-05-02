@@ -41,15 +41,10 @@ operador_relacional : LESSTHAN | MORETHAN | LESSEQUAL | MOREEQUAL | EQUAL | NOTE
 operador_logico : AND | OR | NOT
 operador_asignacion : ASSIGN | PLUSASSIGN | MINUSASSIGN | STARASSIGN | SLASHASSIGN
 
-<<<<<<< HEAD
 // EXPRESIONES
 expression : expression_aritmetica | expression_booleana
-=======
-expression : expression_aritmetica | expression_booleana | llamada_funcion
->>>>>>> 1887b039bd4789d18f5e2961c28c4f6c9910ada6
 expression_aritmetica : term (( PLUS | MINUS ) term)*
 expression_booleana : comparacion (operador_logico comparacion)* | "(" expression_booleana ")"
-llamada_funcion : identificador "(" [expression ("," expression)*] ")"
 comparacion : expression_aritmetica operador_relacional expression_aritmetica | "(" comparacion ")"
 
 term : factor (( STAR | SLASH | PERCENT ) factor)*
@@ -81,13 +76,8 @@ control_flujo : "break" | "continue" | "return" expression?
 
 // FUNCIONES
 funcion : "func" identificador "(" (parametros)? ")" "->" tipo_dato bloque
-<<<<<<< HEAD
 parametros : parametro ("," parametro)*
 parametro : tipo_dato identificador
-=======
-struct : "struct" identificador bloque
-parametros : tipo_dato identificador ("," tipo_dato identificador)*
->>>>>>> 1887b039bd4789d18f5e2961c28c4f6c9910ada6
 
 // TRY CATCH
 try_catch : "try" bloque "catch" "(" identificador ")" bloque
