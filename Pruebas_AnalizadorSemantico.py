@@ -857,9 +857,6 @@ def show_functions(parse_tree):
 
     function_popup.config(state="disabled")
 
-
-
-
 def show_definitionsUsers():
     global tokens_list, symbol_table_instance
 
@@ -882,7 +879,7 @@ def show_definitionsUsers():
     structure_popup.insert("end", "-" * 140 + "\n")
 
     for identifier, symbol_info in global_tracker.symbols.items():
-        if symbol_info.get('is_struct', False):
+        if symbol_info.get('is_struct', True):
             # Estructura interna
             estructura_interna = ", ".join(symbol_info.get('fields', []))
             
