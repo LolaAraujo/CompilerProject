@@ -115,7 +115,7 @@ class SymbolTracker:
     def set_struct(self, name, line):
         self.current_struct = name
         if name not in self.symbols:
-            self.add_declaration(name, line, 'struct')
+            self.add_declaration(name, line, 'struct',False,True)
         self.symbols[name]['is_struct'] = True
         self.symbols[name]['fields'] = []
         self.symbols[name]['methods'] = []
@@ -869,7 +869,7 @@ def show_definitionsUsers():
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Estructuras")
-    pop_up.geometry("1000x500")
+    pop_up.geometry("1050x500")
     label = tk.Label(pop_up, text="Estructuras", font=("Arial", 11))
     label.pack()
     structure_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
@@ -905,6 +905,8 @@ def show_definitionsUsers():
             structure_popup.insert("end", row_format)
 
     structure_popup.config(state="disabled")
+
+
 
 
 #==================== DEFINICIÓN DE TOKENS ====================
@@ -1008,7 +1010,7 @@ def compile_code():
         current_function = None
         brace_level = 0
         
-        print("=== Tokens encontrados ===")
+        
         for i, token in enumerate(tokens):
             token_str = f"{token.line}: {token.type}: {token.value}"
             tokens_list.append(token_str)
@@ -1092,69 +1094,31 @@ def compile_code():
                                 brace_level -= 1
                             elif tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
                                 # Detectar campos de la struct
-                                field_type = tokens[k].value
                                 if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
                                     field_name = tokens[k+1].value
-                                    fields.append({"name": field_name, "type": field_type})
+                                    fields.append(field_name)
                             elif tokens[k].type == "FUNC" and k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
                                 # Detectar métodos de la struct
                                 method_name = tokens[k+1].value
-                                method_params = []
-                                method_return_type = "void"  # Valor por defecto si no se especifica
-
-                                # Buscar el tipo de retorno y los parámetros del método
-                                m = k + 2
-                                while m < len(tokens):
-                                    if tokens[m].type == "LPAR":
-                                        # Procesar parámetros del método
-                                        n = m + 1
-                                        while n < len(tokens) and tokens[n].type != "RPAR":
-                                            if tokens[n].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
-                                                param_type = tokens[n].value
-                                                if n+1 < len(tokens) and tokens[n+1].type == "IDENTIFICADOR":
-                                                    param_name = tokens[n+1].value
-                                                    method_params.append({"name": param_name, "type": param_type, "mode": "valor"})  # Asumimos modo de paso por valor
-                                            n += 1
-                                        m = n
-                                    elif tokens[m].type == "ARROW":
-                                        # Procesar tipo de retorno del método
-                                        if m+1 < len(tokens) and tokens[m+1].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT", "VOID"]:
-                                            method_return_type = tokens[m+1].value
-                                    elif tokens[m].type == "LBRACE":
-                                        # Procesar variables locales dentro del bloque del método
-                                        method_brace_level = 1
-                                        n = m + 1
-                                        while n < len(tokens) and method_brace_level > 0:
-                                            if tokens[n].type == "LBRACE":
-                                                method_brace_level += 1
-                                            elif tokens[n].type == "RBRACE":
-                                                method_brace_level -= 1
-                                            n += 1
-                                        break
-                                    m += 1
-
-                                methods.append({
-                                    "name": method_name,
-                                    "params": method_params,
-                                    "return_type": method_return_type,
-                                    "declared": True,
-                                    "defined": True  # Asumimos que el método está definido si se encuentra el bloque
-                                })
+                                methods.append(method_name)
                             k += 1
                         break
                     j += 1
 
+                tracker.set_struct(struct_name, token.line)
                 tracker.symbols[struct_name] = {
                     "type": "struct",
                     "fields": fields,
                     "methods": methods,
                     "declared": True,
-                    "is_struct": True  # Asumimos que la struct está definida si se encuentra el bloque
+                    "defined": True  # Asumimos que la struct está definida si se encuentra el bloque
                 }
 
 
+
+
             # Detección de declaraciones (VERSIÓN CORREGIDA)
-            if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+            if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY"]:
                 # Buscar el identificador (puede estar después de =, *, etc.)
                 j = i + 1
                 while j < len(tokens):
@@ -1186,6 +1150,7 @@ def compile_code():
         
         print("=== Símbolos registrados ===")
         print(tracker.symbols)
+        print("=== Tokens encontrados ===")
         print(tokens_list)
         # Guardar análisis para uso posterior
         symbol_table_instance.save_analysis({
