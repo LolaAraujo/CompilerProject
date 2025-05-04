@@ -2,7 +2,7 @@
 # Maria Dolores Cervantes Araujo
 # Fabian Gutierrez Gachuz
 # Fernando de Jesus Rivera Reos
-# Update: 10/04/2025
+# Update: 02/05/2025
 
 import tkinter as tk
 from tkinter import *
