@@ -1,17 +1,26 @@
-<<<<<<< HEAD
 {
-  "x": {
-    "Identificador": "x",
+  "a": {
+    "Identificador": "a",
     "Categor\u00eda": "IDENTIFICADOR",
     "Tipo": "INT",
     "\u00c1mbito": "global",
-    "Direcci\u00f3n": "0x3F3AD8DBC158BCF3",
+    "Direcci\u00f3n": "0x55E0836C72BF649D",
     "L\u00ednea": "1",
     "Valor": "No inicializado",
     "Estado": "Usado (no declarado)",
     "Estructura": "Variable simple",
-    "Uso": "2"
+    "Uso": "3"
+  },
+  "b": {
+    "Identificador": "b",
+    "Categor\u00eda": "IDENTIFICADOR",
+    "Tipo": "FLOAT",
+    "\u00c1mbito": "global",
+    "Direcci\u00f3n": "0x34BF08D3B73B597",
+    "L\u00ednea": "2",
+    "Valor": "No inicializado",
+    "Estado": "Usado (no declarado)",
+    "Estructura": "Variable simple",
+    "Uso": ""
   }
 }
-=======
->>>>>>> 1887b039bd4789d18f5e2961c28c4f6c9910ada6
