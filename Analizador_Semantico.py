@@ -430,7 +430,7 @@ symbol_table_instance = SymbolTable()
 #     int y = 10;
 #     int resultado;
     
-#     resultado = suma(x, y);kk
+#     resultado = suma(x, y);
 #     print(resultado);
     
 #     if (resultado > 10) {
