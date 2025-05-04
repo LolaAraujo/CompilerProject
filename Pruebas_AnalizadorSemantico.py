@@ -17,7 +17,6 @@ import json
 from lark.tree import pydot__tree_to_png
 from collections import defaultdict
 
-
 # Ejemplo de código para analizar
 # func suma(int a, int b) -> int {
 #     return a + b;
@@ -419,6 +418,7 @@ symbol_table_instance = SymbolTable()
 
 # ==================== ANALIZADOR SEMANTICO  ====================
 
+#
 # const float PI = 3.1416;
 
 # func suma(int a, int b) -> int {
@@ -903,9 +903,6 @@ def show_definitionsUsers():
 
     structure_popup.config(state="disabled")
 
-
-
-
 #==================== DEFINICIÓN DE TOKENS ====================
 
 TOKENS_GRAMATICA = {
@@ -1110,9 +1107,6 @@ def compile_code():
                     "declared": True,
                     "defined": True  # Asumimos que la struct está definida si se encuentra el bloque
                 }
-
-
-
 
             # Detección de declaraciones (VERSIÓN CORREGIDA)
             if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY"]:
@@ -1325,7 +1319,6 @@ line_numbers_scrollbar.pack(side="right", fill="y")
 # Asociamos el scrollbar al Text widget de números de línea
 line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 
-
 # Consola de errores | frame inferior
 console_output = tk.Text(frame_inferior, bg='black', fg='white', font=("Consolas", 10), height=10)
 console_output.pack(side="left", fill="both", expand=True)
@@ -1336,8 +1329,6 @@ label_error.place(x=850, y=5)
 error_scrollbar = tk.Scrollbar(frame_inferior, orient="vertical" ,command=console_output.yview)
 error_scrollbar.pack(side="right", fill="y")
 console_output.config(yscrollcommand=error_scrollbar.set)
-
-
 
 # ==================== MANEJO DE GRAMÁTICA ====================
 

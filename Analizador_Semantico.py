@@ -24,6 +24,8 @@ from collections import defaultdict
 
 # Variable global para almacenar tokens
 tokens_list = []
+global_tracker = None
+parse_tree = None
 
 #==================== MANEJO DE ERRORES ====================
 
@@ -68,29 +70,80 @@ class SymbolTracker:
         self.declarations = {}  # {name: {line, type, scope}}
         self.usages = defaultdict(list)  # {name: [line1, line2,...]}
         self.current_scope = "global"
+        self.scope_level = 0
+        self.current_function = None
+        self.current_struct = None
+        self.symbols = {}
     
-    def add_declaration(self, name, line, symbol_type):
-        if name not in self.declarations:
-            self.declarations[name] = {
-                "line": line,
-                "type": symbol_type,
-                "scope": self.current_scope
-            }
+    def add_declaration(self, name, line, symbol_type, is_pointer=False, is_struct=False):
+        name = name.replace('*', '').strip()  # Limpiar nombre si es puntero
+        scope = f"{self.current_scope}:{self.scope_level}"
+        if self.current_function:
+            scope = f"{self.current_function}:{scope}"
+            
+        self.symbols[name] = {
+            'type': symbol_type,
+            'line': line,
+            'scope': scope,
+            'is_pointer': is_pointer,
+            'is_struct': is_struct,
+            'is_function': False
+        }
     
     def add_usage(self, name, line):
         self.usages[name].append(line)
     
     def enter_scope(self):
+        self.scope_level += 1
         self.current_scope = "local"
     
     def exit_scope(self):
-        self.current_scope = "global"
+        self.scope_level -= 1
+        if self.scope_level == 0:
+            self.current_scope = "global"
+            self.current_function = None
+    
+    def set_function(self, name, line):
+        self.current_function = name
+        if name not in self.symbols:
+            self.add_declaration(name, line, 'function')
+        self.symbols[name]['is_function'] = True
+        self.symbols[name]['params'] = []
+        self.symbols[name]['return_type'] = 'void'
+
+    def set_struct(self, name, line):
+        self.current_struct = name
+        if name not in self.symbols:
+            self.add_declaration(name, line, 'struct',False,True)
+        self.symbols[name]['is_struct'] = True
+        self.symbols[name]['fields'] = []
+        self.symbols[name]['methods'] = []
+
+    
+    def get_full_type(self, name):
+        info = self.declarations.get(name, {})
+        if not info:
+            return "desconocido"
+        
+        type_str = info["type"]
+        if info.get("is_pointer"):
+            type_str = f"puntero a {type_str}"
+        if info.get("is_struct"):
+            type_str = f"estructura {type_str}"
+        
+        return type_str
+    
+    def get_scope_info(self, name):
+        info = self.declarations.get(name, {})
+        if not info:
+            return "global:0"
+        return info["scope"]
     
     def get_declaration_line(self, name):
         return self.declarations.get(name, {}).get("line", None)
     
     def get_usage_lines(self, name):
-        return self.usages.get(name, [])
+        return len(self.usages.get(name, []))
     
     def get_symbol_type(self, name):
         return self.declarations.get(name, {}).get("type", None)
@@ -115,7 +168,7 @@ class SymbolTable:
 
         # Secondary storage file path
         self.secondary_storage_path = "symbol_table_overflow.json"
-
+        self.last_analysis = {}
         # Ensure the secondary storage file exists
         open(self.secondary_storage_path, 'a').close()
 
@@ -172,6 +225,17 @@ class SymbolTable:
                 f.truncate()
         except Exception as e:
             print(f"Error in secondary storage: {e}")
+    
+    def save_analysis(self, tracker):
+        """Guarda el último análisis completo"""
+        self.last_analysis = {
+            'symbols': tracker.symbols if hasattr(tracker, 'symbols') else {},
+            'usages': tracker.usages if hasattr(tracker, 'usages') else {}
+        }
+        
+    def get_last_analysis(self):
+        """Recupera el último análisis"""
+        return self.last_analysis
 
     def get_symbol(self, identifier):
         """
@@ -230,7 +294,7 @@ class SymbolTable:
         # # Para identificadores (variables/funciones)
         if token_type == "IDENTIFICADOR":
             # Verificamos si es una función conocida
-            if identifier in ["void", "read", "func", "main"]:
+            if identifier in ["void", "read", "func", "main", "struct"]:
                 return "función"
             elif identifier in ["print"]:
                 return "función de salida"
@@ -354,16 +418,33 @@ symbol_table_instance = SymbolTable()
 
 # ==================== ANALIZADOR SEMANTICO  ====================
 
+### Ejemplo de código para analizar
+# const float PI = 3.1416;
 
+# func suma(int a, int b) -> int {
+#     return a + b;
+# }
+
+# func main() -> void {
+#     int x = 5;
+#     int y = 10;
+#     int resultado;
+    
+#     resultado = suma(x, y);
+#     print(resultado);
+    
+#     if (resultado > 10) {
+#         float temp = resultado * PI;
+#         print(temp);
+#     }
+# }
 
 # ==================== VISUALIZACIONES ====================
 
-def show_symbol_table(tracker=None):
+def show_symbol_table():
     """Creates a pop-up window for the symbol table"""
-    global tokens_list, symbol_table_instance
-
-    if not tokens_list:
-        messagebox.showinfo("Información", "No hay tokens para mostrar.")
+    if not global_tracker or not global_tracker.symbols:  # Verifica si hay símbolos
+        messagebox.showinfo("Información", "No hay datos de análisis disponibles. Compile primero.")
         return
 
     pop_up = tk.Toplevel(root)
@@ -384,54 +465,60 @@ def show_symbol_table(tracker=None):
     symbol_table_popup.insert("end", "-" * 170 + "\n")
     
    
-    for token in tokens_list:
-        parts = token.split(": ")
-        if len(parts) == 3 and parts[1] == "IDENTIFICADOR":
-            decl_line, token_type, identifier = parts
-            
-            # Usar información del tracker si está disponible
-            if tracker:
-                usage_lines = tracker.get_usage_lines(identifier)
-                symbol_scope = tracker.get_symbol_scope(identifier)
-                decl_line = tracker.get_declaration_line(identifier) or decl_line
-            else:
-                usage_lines = []
-                symbol_scope = "Global"
-                
-            if identifier in ["main", "print", "void", "read", "func"]:
-                category = "FUNCIÓN"
-            else:
-                category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
-            
-            symbol_details = {
-                "Identificador": identifier,
-                "Categoría": category,
-                "Tipo": symbol_table_instance.infer_type(token_type, identifier, tracker),
-                "Ámbito": symbol_scope,
-                "Dirección": f"0x{abs(hash(identifier)):08X}",
-                "Línea": str(decl_line),
-                "Valor": symbol_table_instance.get_value(identifier, None, token_type),
-                "Estado": symbol_table_instance.determine_state(identifier),
-                "Estructura": symbol_table_instance.get_structure_info(identifier, token_type),
-                "Uso": ", ".join(map(str, usage_lines)),
-            }
-            
-            symbol_table_instance.add_symbol(identifier, symbol_details)
-   
-    all_symbols = symbol_table_instance.get_all_symbols()
-    for identifier, symbol in all_symbols.items():
+    # Procesamos los símbolos del último análisis
+    for identifier, symbol_info in global_tracker.symbols.items():
+        # Obtener información de usos
+        usage_count = len(global_tracker.usages.get(identifier, []))
+        
+        # Determinar categoría
+        if identifier in ["main", "print", "void", "read", "func", "struct"] or symbol_info.get('is_function', False):
+            category = "FUNCIÓN"
+        else:
+            # Buscar el tipo de token en los tokens originales si es necesario
+            token_type = symbol_info.get('type', 'IDENTIFICADOR')
+            category = TOKENS_GRAMATICA.get(token_type, "VARIABLE")
+        
+        # Obtener información de estructura si es aplicable
+        structure_info = "Variable simple"
+        if symbol_info.get('is_struct', False):
+            structure_info = f"Estructura {symbol_info['type']}"
+        elif symbol_info.get('is_pointer', False):
+            structure_info = f"Puntero a {symbol_info['type']}"
+        
+        # Determinar estado
+        state = "Declarado"
+        if symbol_info.get('value') is not None:
+            state = "Inicializado"
+        if usage_count > 0:
+            state += " + Usado"
+        
+        # Construir detalles del símbolo
+        symbol_details = {
+            "Identificador": identifier,
+            "Categoría": category,
+            "Tipo": symbol_info.get('type', 'desconocido'),
+            "Ámbito": symbol_info.get('scope', 'global'),
+            "Dirección": f"0x{abs(hash(identifier)):08X}",
+            "Línea": str(symbol_info.get('line', '')),
+            "Valor": symbol_info.get('value', 'No inicializado'),
+            "Estado": state,
+            "Estructura": structure_info,
+            "Uso": str(usage_count),
+        }
+        
+        # Mostrar en la tabla
         try: 
             row_format = "{:<20} {:<20} {:<15} {:<15} {:<18} {:<12} {:20} {:20} {:20} {:10}\n".format(
-                symbol.get("Identificador", "")[:20],
-                symbol.get("Categoría", "")[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Ámbito", "")[:15],
-                symbol.get("Dirección", "0x0000")[:18],
-                symbol.get("Línea", "")[:12],
-                symbol.get("Valor", "")[:20],
-                symbol.get("Estado", "")[:20],
-                symbol.get("Estructura", "")[:20],
-                str(symbol.get("Uso", 0))[:10]  # Aseguramos que sea string para el formato
+                symbol_details["Identificador"][:20],
+                symbol_details["Categoría"][:20],
+                symbol_details["Tipo"][:15],
+                symbol_details["Ámbito"][:15],
+                symbol_details["Dirección"][:18],
+                symbol_details["Línea"][:12],
+                str(symbol_details["Valor"])[:20],
+                symbol_details["Estado"][:20],
+                symbol_details["Estructura"][:20],
+                symbol_details["Uso"][:10]
             )
             symbol_table_popup.insert("end", row_format)
         except Exception as e:
@@ -580,15 +667,14 @@ def show_ats_tree():
         messagebox.showerror("Error", f"No se pudo construir el árbol: {str(e)}")
 
 def show_identificators():
-    global symbol_table_instance
-    
-    if not symbol_table_instance.get_all_symbols():
-        messagebox.showinfo("Información", "No hay identificadores para mostrar.")
+    # Obtenemos el último análisis guardado
+    if not global_tracker or not global_tracker.symbols:  # Verifica si hay símbolos
+        messagebox.showinfo("Información", "No hay datos de análisis disponibles. Compile primero.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Identificadores")
-    pop_up.geometry("800x600")
+    pop_up.geometry("950x500")
 
     label = tk.Label(pop_up, text="Identificadores", font=("Arial", 11))
     label.pack()
@@ -597,32 +683,40 @@ def show_identificators():
     identificator_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Valor"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Tipo", "Ambito", "Linea", "Estado", "Referencias"]
+    header_format = "{:<20} {:<15} {:<20} {:<20} {:<25} {:<25}\n".format(*headers)
     identificator_popup.insert("end", header_format)
-    identificator_popup.insert("end", "-" * 55 + "\n")
+    identificator_popup.insert("end", "-" * 130 + "\n")
     
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "IDENTIFICADOR":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
-                identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Valor", "")[:20]
-            )
-            identificator_popup.insert("end", row_format)
+    # Procesamos los símbolos del último análisis
+    for name, info in global_tracker.symbols.items():
+        usage_lines = global_tracker.usages.get(name, [])
+        usage_count = len(usage_lines)
+        usage_info = f"{usage_count} usos" + (f" (líneas: {', '.join(map(str, usage_lines))})" if usage_lines else "")
+        
+        
+        row_format = "{:<20} {:<25} {:<20} {:<10} {:<20} {:<20}\n".format(
+            name[:20],
+            info.get('type', 'desconocido')[:25],
+            info.get('scope', 'global')[:20],
+            str(info.get('line', ''))[:10],
+            "Completo" if usage_count > 0 else "Declarado",
+            usage_info[:20]
+        )
+        identificator_popup.insert("end", row_format)
 
     identificator_popup.config(state="disabled")
     
 def show_variables():
-    global symbol_table_instance
-    
-    if not symbol_table_instance.get_all_symbols():
-        messagebox.showinfo("Información", "No hay variables para mostrar.")
+    global global_tracker, tokens_list
+
+    if not global_tracker or not global_tracker.symbols:
+        messagebox.showinfo("Información", "No hay variables para mostrar. Compile primero.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Variables")
-    pop_up.geometry("800x600")
+    pop_up.geometry("900x500")
 
     label = tk.Label(pop_up, text="Variables", font=("Arial", 11))
     label.pack()
@@ -630,87 +724,180 @@ def show_variables():
     variable_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     variable_popup.pack(expand=True, fill="both")
 
-    # Headers
-    headers = ["Identificador", "Tipo", "Valor", "Estado"]
-    header_format = "{:<20} {:<15} {:<20} {:<10}\n".format(*headers)
+    # Encabezados
+    headers = [
+        "Identificador", 
+        "Tipo", 
+        "Tamaño Memoria", 
+        "Dirección Relativa", 
+        "Atributos Constante", 
+        "Modificabilidad"
+    ]
+    header_format = "{:<20} {:<15} {:<15} {:<20} {:<25} {:<20}\n".format(*headers)
     variable_popup.insert("end", header_format)
-    variable_popup.insert("end", "-" * 70 + "\n")
+    variable_popup.insert("end", "-" * 110 + "\n")
+
+    # Tamaños por tipo
+    def get_size(var_type):
+        sizes = {
+            "int": 4,
+            "float": 4,
+            "bool": 1,
+            "char": 1,
+            "string": 8,
+            "array": 8,
+            "struct": 8
+        }
+        return sizes.get(var_type.lower(), 4)
+
+    # Detección de constante usando expresiones regulares
+    def get_const_info(name, var_type):
+        for i in range(len(tokens_list) - 2):
+            if (": CONST: const" in tokens_list[i] and
+                f": {var_type.upper()}: " in tokens_list[i + 1] and
+                f": IDENTIFICADOR: {name}" in tokens_list[i + 2]):
+                return "Constante"
+        return "No aplica"
+
+    def get_modifiability(name, var_type, is_const, info):
+        if is_const:
+            return "No (const)"
+        
+        if info.get('is_pointer', False):
+            return "No (puntero)"
+
+        for i in range(len(tokens_list) - 1):
+            if (f": IDENTIFICADOR: {name}" in tokens_list[i] and
+                ": ASSIGN: =" in tokens_list[i + 1]):
+                # Excluir declaración
+                declared = False
+                for j in range(max(i - 2, 0), i):
+                    if f": {var_type.upper()}:" in tokens_list[j] or ": CONST:" in tokens_list[j]:
+                        declared = True
+                        break
+                if not declared:
+                    return "Sí"
     
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "VARIABLE":
-            row_format = "{:<20} {:<15} {:<20} {:<10}\n".format(
-                identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Valor", "")[:20],
-                symbol.get("Estado", "")[:10]
-            )
-            variable_popup.insert("end", row_format)
+        return "No (solo lectura)"
+
+    # Mostrar cada variable
+    for name, info in global_tracker.symbols.items():
+        if info.get('is_function', False):
+            continue
+        
+        var_type = info.get('type', 'desconocido')
+        usage_lines = global_tracker.usages.get(name, [])
+
+        const_value = get_const_info(name, var_type)
+        is_const = const_value != "No aplica"
+
+        modifiability = get_modifiability(name, var_type, is_const, info)
+        address = f"0x{abs(hash(name)) % 65536:04X}"
+
+        row_format = "{:<20} {:<15} {:<15} {:<20} {:<25} {:<20}\n".format(
+            name[:20],
+            var_type[:15],
+            str(get_size(var_type))[:15],
+            address[:20],
+            const_value[:25],
+            modifiability[:20],
+        )
+        variable_popup.insert("end", row_format)
 
     variable_popup.config(state="disabled")
 
-def show_functions():
-    global symbol_table_instance
-    
-    if not symbol_table_instance.get_all_symbols():
-        messagebox.showinfo("Información", "No hay funciones para mostrar.")
+def show_functions(parse_tree):
+    global tokens_list, symbol_table_instance
+
+    if not tokens_list:
+        messagebox.showinfo("Información", "No hay funciones/procedimientos para mostrar.")
         return
 
     pop_up = tk.Toplevel(root)
-    pop_up.title("Funciones")
-    pop_up.geometry("800x600")
-
+    pop_up.title("Funciones y Procedimientos")
+    pop_up.geometry("1150x500")
     label = tk.Label(pop_up, text="Funciones", font=("Arial", 11))
     label.pack()
-
     function_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     function_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Parámetros"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Firma", "Lista de Parámetros", "Tipo de Retorno", "Variables Locales", "Estado de Implementación"]
+    header_format = "{:<20} {:<30} {:<30} {:<20} {:<30} {:<25}\n".format(*headers)
     function_popup.insert("end", header_format)
-    function_popup.insert("end", "-" * 55 + "\n")
-    
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "FUNCIÓN":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
+    function_popup.insert("end", "-" * 155 + "\n")
+
+    for identifier, symbol_info in global_tracker.symbols.items():
+        if symbol_info.get('is_function', False):
+            # Obtener firma completa
+            params_str = ", ".join([param['name'] for param in symbol_info.get('params', [])])
+            firma = f"{symbol_info.get('type', 'desconocido')} {identifier}({params_str})"
+            
+            # Lista de parámetros
+            lista_parametros = ", ".join([f"{param['name']} ({param['type']}, {param['mode']})" for param in symbol_info.get('params', [])])
+            
+            # Tipo de retorno
+            tipo_retorno = symbol_info.get('return_type', 'desconocido')
+            
+            # Variables locales
+            variables_locales = ", ".join(symbol_info.get('local_vars', []))
+            
+            # Estado de implementación
+            estado_implementacion = "Declarada" if symbol_info.get('declared', False) and not symbol_info.get('defined', False) else "Definida"
+
+            row_format = "{:<20} {:<30} {:<30} {:<20} {:<30} {:<25}\n".format(
                 identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Parámetros", "")[:20]
+                firma[:30],
+                lista_parametros[:30],
+                tipo_retorno[:20],
+                variables_locales[:30],
+                estado_implementacion[:25]
             )
             function_popup.insert("end", row_format)
 
     function_popup.config(state="disabled")
 
 def show_definitionsUsers():
-    global symbol_table_instance
-    
-    if not symbol_table_instance.get_all_symbols():
+    global tokens_list, symbol_table_instance
+
+    if not tokens_list:
         messagebox.showinfo("Información", "No hay estructuras para mostrar.")
         return
 
     pop_up = tk.Toplevel(root)
     pop_up.title("Estructuras")
-    pop_up.geometry("800x600")
-
+    pop_up.geometry("1050x500")
     label = tk.Label(pop_up, text="Estructuras", font=("Arial", 11))
     label.pack()
-
     structure_popup = tk.Text(pop_up, bg='lightgray', fg='black', font=("Consolas", 10))
     structure_popup.pack(expand=True, fill="both")
 
     # Headers
-    headers = ["Identificador", "Tipo", "Campos"]
-    header_format = "{:<20} {:<15} {:<20}\n".format(*headers)
+    headers = ["Identificador", "Estructura Interna", "Métodos Asociados", "Herencia", "Restricciones"]
+    header_format = "{:<20} {:<30} {:<30} {:<30} {:<30}\n".format(*headers)
     structure_popup.insert("end", header_format)
-    structure_popup.insert("end", "-" * 55 + "\n")
-    
-    for identifier, symbol in symbol_table_instance.get_all_symbols().items():
-        if symbol.get("Categoría") == "ESTRUCTURA":
-            row_format = "{:<20} {:<15} {:<20}\n".format(
+    structure_popup.insert("end", "-" * 140 + "\n")
+
+    for identifier, symbol_info in global_tracker.symbols.items():
+        if symbol_info.get('is_struct', True):
+            # Estructura interna
+            estructura_interna = ", ".join(symbol_info.get('fields', []))
+            
+            # Métodos asociados
+            metodos_asociados = ", ".join(symbol_info.get('methods', []))
+            
+            # Herencia
+            herencia = symbol_info.get('inheritance', 'N/A')
+            
+            # Restricciones
+            restricciones = symbol_info.get('restrictions', 'N/A')
+
+            row_format = "{:<20} {:<30} {:<30} {:<30} {:<30}\n".format(
                 identifier[:20],
-                symbol.get("Tipo", "")[:15],
-                symbol.get("Campos", "")[:20]
+                estructura_interna[:30],
+                metodos_asociados[:30],
+                herencia[:30],
+                restricciones[:30]
             )
             structure_popup.insert("end", row_format)
 
@@ -793,7 +980,7 @@ def update_line_numbers(event=None):
     line_numbers.config(state="disabled")
 
 def compile_code():
-    global tokens_list, symbol_table_instance
+    global tokens_list, global_tracker
     
     code = input_code.get("1.0", "end-1c").strip()
     if not code:
@@ -802,74 +989,175 @@ def compile_code():
         return
 
     console_output.delete("1.0", "end")
-    symbol_table_instance.clear()
-    tokens_list.clear()
     error_manager.clear_errors()
     
     tracker = SymbolTracker()
+    global_tracker = tracker
+    tokens_list = []
     
     try:
-        # Primera pasada: análisis léxico y rastreo de símbolos
-        tokens_lexicos = list(parser.lex(code))
+        # Análisis léxico
+        lexer = parser.lex
+        tokens = list(lexer(code))
         
-        # Procesamiento para identificar declaraciones y usos
-        i = 0
-        while i < len(tokens_lexicos):
-            token = tokens_lexicos[i]
-            
-            # Manejo de cambios de ámbito
+        # Procesamiento para rastrear símbolos
+        current_function = None
+        brace_level = 0
+        
+        
+        for i, token in enumerate(tokens):
+            token_str = f"{token.line}: {token.type}: {token.value}"
+            tokens_list.append(token_str)
+
+            # Manejo de ámbitos
             if token.type == "LBRACE":
+                brace_level += 1
                 tracker.enter_scope()
             elif token.type == "RBRACE":
+                brace_level -= 1
                 tracker.exit_scope()
-            
-            # Detección de declaraciones de variables
-            if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING"]:
-                if i+1 < len(tokens_lexicos) and tokens_lexicos[i+1].type == "IDENTIFICADOR":
-                    var_name = tokens_lexicos[i+1].value
-                    tracker.add_declaration(var_name, token.line, token.type)
-                    i += 1  # Saltar el identificador
-            
-            # Registro de usos de identificadores
-            elif token.type == "IDENTIFICADOR":
-                tracker.add_usage(token.value, token.line)
-                
-                # Verificar si el identificador fue declarado
-                if not tracker.get_declaration_line(token.value):
-                    error_manager.add_error(
-                        line=token.line,
-                        subject=token.value,
-                        error_type="Variable no declarada",
-                        solution="Declare la variable antes de usarla"
-                    )
-            
-            i += 1
-        
-        # Segunda pasada: generación de tokens_list con líneas correctas
-        tokens_list = []
-        for token in tokens_lexicos:
+
+            # Detección de funciones (MEJORADO++)
+            if token.type == "FUNC" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
+                func_name = tokens[i+1].value
+                params = []
+                return_type = "void"  # Valor por defecto si no se especifica
+                local_vars = []
+
+                # Buscar el tipo de retorno y los parámetros
+                j = i + 2
+                while j < len(tokens):
+                    if tokens[j].type == "LPAR":
+                        # Procesar parámetros
+                        k = j + 1
+                        while k < len(tokens) and tokens[k].type != "RPAR":
+                            if tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                param_type = tokens[k].value
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    param_name = tokens[k+1].value
+                                    params.append({"name": param_name, "type": param_type, "mode": "valor"})  # Asumimos modo de paso por valor
+                            k += 1
+                        j = k
+                    elif tokens[j].type == "__ANON_11":
+                        # Procesar tipo de retorno
+                        if j+1 < len(tokens) and tokens[j+1].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT", "VOID"]:
+                            return_type = tokens[j+1].value
+                    elif tokens[j].type == "LBRACE":
+                        # Procesar variables locales dentro del bloque de la función
+                        brace_level = 1
+                        k = j + 1
+                        while k < len(tokens) and brace_level > 0:
+                            if tokens[k].type == "LBRACE":
+                                brace_level += 1
+                            elif tokens[k].type == "RBRACE":
+                                brace_level -= 1
+                            elif tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                var_type = tokens[k].value
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    var_name = tokens[k+1].value
+                                    local_vars.append(var_name)
+                            k += 1
+                        break
+                    j += 1
+
+                tracker.set_function(func_name, token.line)
+                tracker.symbols[func_name].update({
+                    "params": params,
+                    "return_type": return_type,
+                    "local_vars": local_vars,
+                    "declared": True,
+                    "defined": True  # Asumimos que la función está definida si se encuentra el bloque
+                })
+
+            # Detección de structs (MEJORADO)
+            if token.type == "STRUCT" and i+1 < len(tokens) and tokens[i+1].type == "IDENTIFICADOR":
+                struct_name = tokens[i+1].value
+                fields = []
+                methods = []
+
+                # Procesar el bloque de la struct
+                j = i + 2
+                while j < len(tokens):
+                    if tokens[j].type == "LBRACE":
+                        brace_level = 1
+                        k = j + 1
+                        while k < len(tokens) and brace_level > 0:
+                            if tokens[k].type == "LBRACE":
+                                brace_level += 1
+                            elif tokens[k].type == "RBRACE":
+                                brace_level -= 1
+                            elif tokens[k].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                                # Detectar campos de la struct
+                                if k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                    field_name = tokens[k+1].value
+                                    fields.append(field_name)
+                            elif tokens[k].type == "FUNC" and k+1 < len(tokens) and tokens[k+1].type == "IDENTIFICADOR":
+                                # Detectar métodos de la struct
+                                method_name = tokens[k+1].value
+                                methods.append(method_name)
+                            k += 1
+                        break
+                    j += 1
+
+                tracker.set_struct(struct_name, token.line)
+                tracker.symbols[struct_name] = {
+                    "type": "struct",
+                    "fields": fields,
+                    "methods": methods,
+                    "declared": True,
+                    "defined": True  # Asumimos que la struct está definida si se encuentra el bloque
+                }
+
+            # Detección de declaraciones (VERSIÓN CORREGIDA)
+            if token.type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY"]:
+                # Buscar el identificador (puede estar después de =, *, etc.)
+                j = i + 1
+                while j < len(tokens):
+                    if tokens[j].type == "IDENTIFICADOR":
+                        var_name = tokens[j].value
+                        is_pointer = any(tk.value == '*' for tk in tokens[i:j])
+                        tracker.add_declaration(var_name, token.line, token.type, is_pointer)
+                        break
+                    j += 1
+
+            # Registro de usos (VERSIÓN MEJORADA)
             if token.type == "IDENTIFICADOR":
-                decl_line = tracker.get_declaration_line(token.value) or token.line
-            else:
-                decl_line = token.line
+                # Verificar que no sea parte de una declaración
+                is_declaration = False
+                for j in range(max(0, i-3), i):
+                    if tokens[j].type in ["INT", "FLOAT", "BOOL", "CHAR", "STRING", "ARRAY", "STRUCT"]:
+                        is_declaration = True
+                        break
                 
-            token_info = f"{decl_line}: {TOKENS_GRAMATICA.get(token.type, token.type)}: {token.value}"
-            tokens_list.append(token_info)
+                if not is_declaration:
+                    tracker.add_usage(token.value, token.line)
         
         # Análisis sintáctico
         parser.parse(code)
+        global parse_tree  
+        parse_tree = parser.parse(code)
         console_output.insert("end", "✅ Análisis completado sin errores\n")
+        # pydot__tree_to_png(parse_tree, "tree.png")
         
-        # Mostrar advertencias
-        mostrar_advertencias(tokens_list)
+        print("=== Símbolos registrados ===")
+        print(tracker.symbols)
+        print("=== Tokens encontrados ===")
+        print(tokens_list)
+        # Guardar análisis para uso posterior
+        symbol_table_instance.save_analysis({
+            'symbols': tracker.symbols,
+            'usages': tracker.usages,
+            'tokens': tokens_list
+        })
+        
+        show_symbol_table()
         
     except UnexpectedInput as e:
-        # Manejo de errores...
-        pass
-        
-    finally:
-        if tokens_list:
-            show_symbol_table(tracker)  # Pasar el tracker a la tabla de símbolos
+        mostrar_error_sintactico(e, code)
+    except Exception as e:
+        console_output.insert("end", f"Error inesperado: {str(e)}\n")
+        import traceback
+        traceback.print_exc()
 
 def mostrar_error_lexico(error_msg, code):
     """Muestra errores léxicos con formato específico"""
@@ -1011,7 +1299,7 @@ identificator_button = tk.Button(frame_superior, text="Identificadores", command
 identificator_button.pack(side="right", padx=10, pady=5)
 variables_button = tk.Button(frame_superior, text="Variables", command=show_variables)
 variables_button.pack(side="right", padx=10, pady=5)
-functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=show_functions)
+functions_button = tk.Button(frame_superior, text="Funciones/Procedimientos", command=lambda: show_functions(parse_tree))
 functions_button.pack(side="right", padx=10, pady=5)
 definitionUsers_button = tk.Button(frame_superior, text="Definiciones por Usuario", command=show_definitionsUsers)
 definitionUsers_button.pack(side="right", padx=10, pady=5)
@@ -1031,7 +1319,6 @@ line_numbers_scrollbar.pack(side="right", fill="y")
 # Asociamos el scrollbar al Text widget de números de línea
 line_numbers.config(yscrollcommand=line_numbers_scrollbar.set)
 
-
 # Consola de errores | frame inferior
 console_output = tk.Text(frame_inferior, bg='black', fg='white', font=("Consolas", 10), height=10)
 console_output.pack(side="left", fill="both", expand=True)
@@ -1042,8 +1329,6 @@ label_error.place(x=850, y=5)
 error_scrollbar = tk.Scrollbar(frame_inferior, orient="vertical" ,command=console_output.yview)
 error_scrollbar.pack(side="right", fill="y")
 console_output.config(yscrollcommand=error_scrollbar.set)
-
-
 
 # ==================== MANEJO DE GRAMÁTICA ====================
 
